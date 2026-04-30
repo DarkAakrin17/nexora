@@ -130,4 +130,55 @@ const sendAcceptedEmail = async ({ toEmail, toName, acceptedByName }) => {
   }
 };
 
-module.exports = { sendConnectionRequestEmail, sendAcceptedEmail };
+// ── Send password reset email ─────────────────────────────────────────────
+const sendPasswordResetEmail = async ({ toEmail, toName, resetUrl }) => {
+  const transporter = createTransporter();
+  if (!transporter) return;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0f1a; color: #e2e8f0; margin: 0; padding: 0; }
+        .wrap { max-width: 600px; margin: 0 auto; padding: 40px 16px; }
+        .card { background: #1a1a2e; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+        .header { background: linear-gradient(135deg, #6366f1, #0ea5e9); padding: 32px; text-align: center; }
+        .header h1 { margin: 0; color: #fff; font-size: 22px; }
+        .body { padding: 28px 32px; }
+        .notice { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 10px; padding: 12px 16px; font-size: 0.82rem; color: #fcd34d; margin: 16px 0; }
+        .cta { display: inline-block; margin-top: 20px; padding: 13px 32px; background: linear-gradient(135deg, #6366f1, #0ea5e9); color: #fff !important; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; }
+        .footer { background: #0d0d1f; padding: 16px 32px; text-align: center; color: #475569; font-size: 12px; border-top: 1px solid rgba(255,255,255,0.05); }
+      </style>
+    </head>
+    <body>
+      <div class="wrap"><div class="card">
+        <div class="header"><h1>🔐 Reset Your Password</h1></div>
+        <div class="body">
+          <p>Hi <strong>${toName}</strong>,</p>
+          <p>We received a request to reset your StudyConnect Global password. Click the button below to set a new password:</p>
+          <a href="${resetUrl}" class="cta">Reset Password →</a>
+          <div class="notice">⏰ This link expires in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.</div>
+          <p style="font-size:0.78rem;color:#475569;margin-top:16px;">Or copy this URL into your browser:<br><span style="color:#818cf8;word-break:break-all;">${resetUrl}</span></p>
+        </div>
+        <div class="footer"><p>StudyConnect Global · Privacy-First Student Networking</p></div>
+      </div></div>
+    </body>
+    </html>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"StudyConnect Global" <${process.env.EMAIL_USER}>`,
+      to: toEmail,
+      subject: `🔐 Reset your StudyConnect Global password`,
+      html,
+    });
+    console.log(`[Email] ✅ Password reset email sent to ${toEmail}`);
+  } catch (err) {
+    console.error('[Email] ❌ Failed to send reset email:', err.message);
+  }
+};
+
+module.exports = { sendConnectionRequestEmail, sendAcceptedEmail, sendPasswordResetEmail };

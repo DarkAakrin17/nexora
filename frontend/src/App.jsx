@@ -8,6 +8,8 @@ import DiscoverPage from './pages/DiscoverPage';
 import RequestsPage from './pages/RequestsPage';
 import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 function PrivateRoute({ children }) {
   const { isLoggedIn } = useAuth();
@@ -50,8 +52,10 @@ export default function App() {
         />
         <Routes>
           {/* Public */}
-          <Route path="/login"  element={<PublicRoute><LoginPage /></PublicRoute>} />
-          <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+          <Route path="/login"           element={<PublicRoute><LoginPage /></PublicRoute>} />
+          <Route path="/signup"          element={<PublicRoute><SignupPage /></PublicRoute>} />
+          <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
           {/* Private */}
           <Route path="/discover"  element={<PrivateRoute><AppLayout><DiscoverPage /></AppLayout></PrivateRoute>} />
