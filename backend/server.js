@@ -4,9 +4,8 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
-require('@dotenvx/dotenvx').config();
+require('dotenv').config();
 
 const authRoutes    = require('./src/routes/auth');
 const userRoutes    = require('./src/routes/users');
@@ -44,9 +43,22 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(cors(corsOptions));
-app.use(mongoSanitize());           // Prevent NoSQL injection ($gt, $where etc.)
+// Lightweight NoSQL injection guard — strips keys containing $ or .
+const sanitizeBody = (req, res, next) => {
+  const sanitize = (obj) => {
+    if (obj && typeof obj === 'object') {
+      Object.keys(obj).forEach((key) => {
+        if (/[$.]/g.test(key)) delete obj[key];
+        else sanitize(obj[key]);
+      });
+    }
+  };
+  sanitize(req.body);
+  next();
+};
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(sanitizeBody);
 
 // ── Rate limiting ─────────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
