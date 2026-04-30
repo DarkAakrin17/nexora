@@ -1,0 +1,284 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import api from '../lib/api';
+import { getSocket } from '../lib/socket';
+import { useAuth } from '../context/AuthContext';
+import { Send, ArrowLeft, GraduationCap, MapPin, Circle } from 'lucide-react';
+import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
+import './ChatPage.css';
+
+export default function ChatPage() {
+  const { userId } = useParams();
+  const navigate = useNavigate();
+  const { user: me } = useAuth();
+  const [conversations, setConversations] = useState([]);
+  const [activeUser, setActiveUser] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMsg, setNewMsg] = useState('');
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [typing, setTyping] = useState(false);
+  const [convLoading, setConvLoading] = useState(true);
+  const [msgLoading, setMsgLoading] = useState(false);
+  const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+
+  // Load conversations
+  const loadConversations = useCallback(async () => {
+    try {
+      const { data } = await api.get('/messages');
+      setConversations(data.conversations);
+    } catch { /* silent */ }
+    finally { setConvLoading(false); }
+  }, []);
+
+  useEffect(() => { loadConversations(); }, [loadConversations]);
+
+  // Load messages when activeUser changes
+  useEffect(() => {
+    if (!activeUser) return;
+    setMsgLoading(true);
+    api.get(`/messages/${activeUser._id}`)
+      .then(({ data }) => {
+        setMessages(data.messages);
+        // Mark as seen via socket
+        getSocket()?.emit('mark_seen', { senderId: activeUser._id });
+      })
+      .catch(() => {})
+      .finally(() => setMsgLoading(false));
+  }, [activeUser]);
+
+  // Navigate to specific user from URL param
+  useEffect(() => {
+    if (userId && conversations.length > 0) {
+      const conv = conversations.find((c) => c.user._id === userId);
+      if (conv) setActiveUser(conv.user);
+    }
+  }, [userId, conversations]);
+
+  // Socket listeners
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleNewMessage = (msg) => {
+      if (
+        (msg.sender === activeUser?._id && msg.receiver === me._id) ||
+        (msg.sender === me._id && msg.receiver === activeUser?._id)
+      ) {
+        setMessages((prev) => [...prev, msg]);
+        if (msg.sender === activeUser?._id) {
+          socket.emit('mark_seen', { senderId: activeUser._id });
+        }
+      }
+      loadConversations();
+    };
+
+    const handleTyping = ({ userId: tid, isTyping }) => {
+      if (tid === activeUser?._id) setTyping(isTyping);
+    };
+
+    const handleOnlineStatus = ({ userId: uid, isOnline }) => {
+      setOnlineUsers((prev) => {
+        const s = new Set(prev);
+        if (isOnline) s.add(uid);
+        else s.delete(uid);
+        return s;
+      });
+    };
+
+    socket.on('new_message', handleNewMessage);
+    socket.on('user_typing', handleTyping);
+    socket.on('user_online_status', handleOnlineStatus);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+      socket.off('user_typing', handleTyping);
+      socket.off('user_online_status', handleOnlineStatus);
+    };
+  }, [activeUser, me._id, loadConversations]);
+
+  // Auto-scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, typing]);
+
+  const sendMessage = () => {
+    if (!newMsg.trim() || !activeUser) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.emit('send_message', { receiverId: activeUser._id, message: newMsg.trim() }, (res) => {
+      if (res?.error) return;
+      setMessages((prev) => [...prev, res.message]);
+      loadConversations();
+    });
+    setNewMsg('');
+    socket?.emit('typing', { receiverId: activeUser._id, isTyping: false });
+  };
+
+  const handleTypingInput = (e) => {
+    setNewMsg(e.target.value);
+    const socket = getSocket();
+    if (!socket || !activeUser) return;
+    socket.emit('typing', { receiverId: activeUser._id, isTyping: true });
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('typing', { receiverId: activeUser._id, isTyping: false });
+    }, 1500);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  };
+
+  const getInitials = (name) => name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  const gradients = ['linear-gradient(135deg,#7c3aed,#06b6d4)', 'linear-gradient(135deg,#ec4899,#8b5cf6)', 'linear-gradient(135deg,#10b981,#06b6d4)', 'linear-gradient(135deg,#f59e0b,#ef4444)'];
+  const getGrad = (name) => gradients[name?.charCodeAt(0) % gradients.length];
+
+  const formatMsgTime = (ts) => {
+    const d = new Date(ts);
+    if (isToday(d)) return format(d, 'h:mm a');
+    if (isYesterday(d)) return `Yesterday ${format(d, 'h:mm a')}`;
+    return format(d, 'MMM d, h:mm a');
+  };
+
+  const formatConvTime = (ts) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (isToday(d)) return format(d, 'h:mm a');
+    return format(d, 'MMM d');
+  };
+
+  return (
+    <div className="chat-page">
+      {/* Sidebar */}
+      <div className={`chat-sidebar ${activeUser ? 'hidden-mobile' : ''}`}>
+        <div className="chat-sidebar-header">
+          <h2>Messages</h2>
+        </div>
+        {convLoading ? (
+          <div className="conv-loading">Loading conversations...</div>
+        ) : conversations.length === 0 ? (
+          <div className="conv-empty">
+            <p>No connections yet.</p>
+            <button className="btn btn-primary btn-sm" onClick={() => navigate('/discover')}>Discover Students</button>
+          </div>
+        ) : (
+          <div className="conv-list">
+            {conversations.map(({ user, lastMessage, unreadCount }) => (
+              <button
+                key={user._id}
+                className={`conv-item ${activeUser?._id === user._id ? 'active' : ''}`}
+                onClick={() => { setActiveUser(user); navigate(`/chat/${user._id}`, { replace: true }); }}
+              >
+                <div className="conv-avatar-wrap">
+                  <div className="avatar avatar-md" style={{ background: getGrad(user.name) }}>
+                    {getInitials(user.name)}
+                  </div>
+                  {onlineUsers.has(user._id) && <div className="online-dot conv-online" />}
+                </div>
+                <div className="conv-info">
+                  <div className="conv-name-row">
+                    <span className="conv-name">{user.name}</span>
+                    <span className="conv-time">{formatConvTime(lastMessage?.timestamp)}</span>
+                  </div>
+                  <div className="conv-preview-row">
+                    <span className="conv-preview">{lastMessage?.message || 'Start a conversation'}</span>
+                    {unreadCount > 0 && <span className="conv-unread">{unreadCount}</span>}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Chat Window */}
+      <div className={`chat-window ${!activeUser ? 'hidden-mobile' : ''}`}>
+        {!activeUser ? (
+          <div className="chat-empty-state">
+            <div style={{ fontSize: '3rem' }}>💬</div>
+            <h3>Select a conversation</h3>
+            <p>Choose a connection from the left to start chatting</p>
+          </div>
+        ) : (
+          <>
+            <div className="chat-header">
+              <button className="btn btn-ghost btn-sm back-btn" onClick={() => { setActiveUser(null); navigate('/chat'); }}>
+                <ArrowLeft size={16} />
+              </button>
+              <div className="avatar avatar-md" style={{ background: getGrad(activeUser.name) }}>
+                {getInitials(activeUser.name)}
+              </div>
+              <div className="chat-header-info">
+                <div className="chat-header-name">
+                  {activeUser.name}
+                  {onlineUsers.has(activeUser._id) && (
+                    <span className="online-label"><Circle size={8} fill="#10b981" stroke="none" /> Online</span>
+                  )}
+                </div>
+                <div className="chat-header-sub">
+                  {[activeUser.university, activeUser.campus, [activeUser.city, activeUser.country].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
+                </div>
+              </div>
+            </div>
+
+            <div className="chat-messages">
+              {msgLoading ? (
+                <div className="msg-loading">Loading messages...</div>
+              ) : messages.length === 0 ? (
+                <div className="msg-empty">
+                  <p>You're now connected with <strong>{activeUser.name}</strong>. Say hello! 👋</p>
+                </div>
+              ) : (
+                messages.map((msg, i) => {
+                  const isMine = msg.sender === me._id || msg.sender?._id === me._id;
+                  return (
+                    <div key={msg._id || i} className={`msg-bubble-wrap ${isMine ? 'mine' : 'theirs'}`}>
+                      <div className={`msg-bubble ${isMine ? 'mine' : 'theirs'}`}>
+                        <p>{msg.message}</p>
+                        <div className="msg-meta">
+                          <span>{formatMsgTime(msg.timestamp)}</span>
+                          {isMine && <span className="seen-status">{msg.seen ? '✓✓' : '✓'}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              {typing && (
+                <div className="msg-bubble-wrap theirs">
+                  <div className="msg-bubble theirs typing-indicator">
+                    <span /><span /><span />
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="chat-input-bar">
+              <textarea
+                id="chat-input"
+                className="chat-input"
+                placeholder={`Message ${activeUser.name}...`}
+                value={newMsg}
+                onChange={handleTypingInput}
+                onKeyDown={handleKeyDown}
+                rows={1}
+                maxLength={2000}
+              />
+              <button
+                id="chat-send"
+                className="btn btn-primary chat-send-btn"
+                onClick={sendMessage}
+                disabled={!newMsg.trim()}
+              >
+                <Send size={18} />
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
