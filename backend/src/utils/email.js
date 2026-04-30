@@ -1,29 +1,27 @@
 const nodemailer = require('nodemailer');
 
 const createTransporter = () => {
-  if (!process.env.EMAIL_USER || process.env.EMAIL_USER === 'your_email@gmail.com') {
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+
+  if (!user || user.includes('your_email') || !pass || pass.includes('your_app')) {
+    console.log('[Email] Email not configured — skipping.');
     return null;
   }
+
   return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT),
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
+    service: 'gmail', // Use Gmail service (auto-sets host/port/TLS correctly)
+    auth: { user, pass },
+    tls: { rejectUnauthorized: false }, // Avoid cert issues on some cloud hosts
   });
 };
 
+// ── Send connection request notification ─────────────────────────────────────
 const sendConnectionRequestEmail = async ({ toEmail, toName, fromName, introMessage, requestId }) => {
   const transporter = createTransporter();
-  if (!transporter) {
-    console.log('[Email] No email config. Skipping email notification.');
-    return;
-  }
+  if (!transporter) return;
 
-  const acceptUrl = `${process.env.FRONTEND_URL}/requests?action=accept&requestId=${requestId}`;
-  const rejectUrl = `${process.env.FRONTEND_URL}/requests?action=reject&requestId=${requestId}`;
+  const dashboardUrl = `${process.env.FRONTEND_URL}/requests`;
 
   const html = `
     <!DOCTYPE html>
@@ -31,101 +29,104 @@ const sendConnectionRequestEmail = async ({ toEmail, toName, fromName, introMess
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #e2e8f0; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 40px auto; background: #1a1a2e; border-radius: 16px; overflow: hidden; }
-        .header { background: linear-gradient(135deg, #667eea, #764ba2); padding: 32px; text-align: center; }
-        .header h1 { margin: 0; font-size: 24px; color: #fff; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0f1a; color: #e2e8f0; margin: 0; padding: 0; }
+        .wrap { max-width: 600px; margin: 0 auto; padding: 40px 16px; }
+        .card { background: #1a1a2e; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+        .header { background: linear-gradient(135deg, #7c3aed, #06b6d4); padding: 32px; text-align: center; }
+        .header h1 { margin: 0; font-size: 22px; color: #fff; }
         .header p { margin: 8px 0 0; color: rgba(255,255,255,0.8); font-size: 14px; }
-        .body { padding: 32px; }
-        .from-badge { display: inline-block; background: rgba(102,126,234,0.2); border: 1px solid #667eea; color: #a78bfa; padding: 4px 12px; border-radius: 20px; font-size: 14px; margin-bottom: 16px; }
-        .message-box { background: #0f0f1a; border-left: 3px solid #667eea; padding: 16px; border-radius: 8px; margin: 16px 0; font-style: italic; color: #cbd5e1; }
-        .buttons { display: flex; gap: 12px; margin-top: 24px; }
-        .btn { display: inline-block; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; }
-        .btn-accept { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
-        .btn-reject { background: rgba(239,68,68,0.2); border: 1px solid #ef4444; color: #f87171; }
-        .footer { background: #0f0f1a; padding: 16px 32px; text-align: center; color: #64748b; font-size: 12px; }
+        .body { padding: 28px 32px; }
+        .badge { display: inline-block; background: rgba(124,58,237,0.2); border: 1px solid #7c3aed; color: #c4b5fd; padding: 4px 14px; border-radius: 20px; font-size: 13px; margin-bottom: 16px; }
+        .msg-box { background: rgba(124,58,237,0.08); border-left: 3px solid #7c3aed; padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 16px 0; font-style: italic; color: #cbd5e1; line-height: 1.6; }
+        .cta { display: inline-block; margin-top: 20px; padding: 13px 32px; background: linear-gradient(135deg, #7c3aed, #06b6d4); color: #fff !important; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; }
+        .footer { background: #0d0d1f; padding: 16px 32px; text-align: center; color: #475569; font-size: 12px; border-top: 1px solid rgba(255,255,255,0.05); }
       </style>
     </head>
     <body>
-      <div class="container">
+      <div class="wrap"><div class="card">
         <div class="header">
           <h1>🌍 StudyConnect Global</h1>
-          <p>A new connection request is waiting for you</p>
+          <p>You have a new connection request</p>
         </div>
         <div class="body">
           <p>Hi <strong>${toName}</strong>,</p>
-          <div class="from-badge">Connection request from ${fromName}</div>
+          <div class="badge">From: ${fromName}</div>
           <p>They introduced themselves:</p>
-          <div class="message-box">"${introMessage}"</div>
-          <p>Log in to your dashboard to respond, or use the quick links below:</p>
-          <div class="buttons">
-            <a href="${acceptUrl}" class="btn btn-accept">✅ Accept</a>
-            <a href="${rejectUrl}" class="btn btn-reject">❌ Decline</a>
-          </div>
+          <div class="msg-box">"${introMessage}"</div>
+          <p>Head to your dashboard to accept or decline:</p>
+          <a href="${dashboardUrl}" class="cta">View Request →</a>
         </div>
         <div class="footer">
-          <p>StudyConnect Global • Privacy-First International Student Networking</p>
+          <p>StudyConnect Global · Privacy-First Student Networking</p>
           <p>You can turn off email notifications in your profile settings.</p>
         </div>
-      </div>
+      </div></div>
     </body>
     </html>
   `;
 
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
+      from: `"StudyConnect Global" <${process.env.EMAIL_USER}>`,
       to: toEmail,
       subject: `🌍 ${fromName} wants to connect with you on StudyConnect Global`,
       html,
     });
-    console.log(`[Email] Sent connection request notification to ${toEmail}`);
+    console.log(`[Email] ✅ Request notification sent to ${toEmail}`);
   } catch (err) {
-    console.error('[Email] Failed to send email:', err.message);
+    console.error('[Email] ❌ Failed to send request email:', err.message);
   }
 };
 
+// ── Send acceptance notification ─────────────────────────────────────────────
 const sendAcceptedEmail = async ({ toEmail, toName, acceptedByName }) => {
   const transporter = createTransporter();
   if (!transporter) return;
+
+  const chatUrl = `${process.env.FRONTEND_URL}/chat`;
 
   const html = `
     <!DOCTYPE html>
     <html>
     <head>
+      <meta charset="utf-8">
       <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #e2e8f0; }
-        .container { max-width: 600px; margin: 40px auto; background: #1a1a2e; border-radius: 16px; overflow: hidden; }
-        .header { background: linear-gradient(135deg, #10b981, #059669); padding: 32px; text-align: center; }
-        .header h1 { margin: 0; color: #fff; }
-        .body { padding: 32px; }
-        .cta { display: inline-block; margin-top: 20px; padding: 12px 28px; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; }
-        .footer { background: #0f0f1a; padding: 16px 32px; text-align: center; color: #64748b; font-size: 12px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0f1a; color: #e2e8f0; margin: 0; padding: 0; }
+        .wrap { max-width: 600px; margin: 0 auto; padding: 40px 16px; }
+        .card { background: #1a1a2e; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+        .header { background: linear-gradient(135deg, #10b981, #06b6d4); padding: 32px; text-align: center; }
+        .header h1 { margin: 0; color: #fff; font-size: 22px; }
+        .body { padding: 28px 32px; }
+        .highlight { font-size: 1.1em; font-weight: 700; color: #6ee7b7; }
+        .cta { display: inline-block; margin-top: 20px; padding: 13px 32px; background: linear-gradient(135deg, #7c3aed, #06b6d4); color: #fff !important; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 15px; }
+        .footer { background: #0d0d1f; padding: 16px 32px; text-align: center; color: #475569; font-size: 12px; border-top: 1px solid rgba(255,255,255,0.05); }
       </style>
     </head>
     <body>
-      <div class="container">
-        <div class="header"><h1>🎉 Connection Accepted!</h1></div>
+      <div class="wrap"><div class="card">
+        <div class="header"><h1>🎉 You're Connected!</h1></div>
         <div class="body">
           <p>Hi <strong>${toName}</strong>,</p>
-          <p><strong>${acceptedByName}</strong> accepted your connection request! You can now chat with each other on StudyConnect Global.</p>
-          <a href="${process.env.FRONTEND_URL}/chat" class="cta">Start Chatting →</a>
+          <p><span class="highlight">${acceptedByName}</span> accepted your connection request on StudyConnect Global!</p>
+          <p>You can now chat, share contact info, and connect on WhatsApp, Instagram, or Telegram.</p>
+          <a href="${chatUrl}" class="cta">Start Chatting →</a>
         </div>
-        <div class="footer"><p>StudyConnect Global • Privacy-First International Student Networking</p></div>
-      </div>
+        <div class="footer"><p>StudyConnect Global · Privacy-First Student Networking</p></div>
+      </div></div>
     </body>
     </html>
   `;
 
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
+      from: `"StudyConnect Global" <${process.env.EMAIL_USER}>`,
       to: toEmail,
       subject: `🎉 ${acceptedByName} accepted your connection request!`,
       html,
     });
+    console.log(`[Email] ✅ Acceptance notification sent to ${toEmail}`);
   } catch (err) {
-    console.error('[Email] Failed to send accepted email:', err.message);
+    console.error('[Email] ❌ Failed to send acceptance email:', err.message);
   }
 };
 

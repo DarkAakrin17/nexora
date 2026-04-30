@@ -8,12 +8,12 @@ const router = express.Router();
 
 // ── Scoring weights for smart matching ──────────────────────────────────────
 const WEIGHTS = {
-  same_university: 30,
-  same_campus:     20,
+  same_university:  30,
+  same_campus:      20,
   same_intake_year: 20,
-  same_city:       15,
-  same_country:    10,
-  shared_interest:  5,  // per shared interest (capped at 4)
+  same_city:        15,
+  same_country:     10,
+  shared_interest:   5, // per shared interest, capped at 4
 };
 
 function scoreMatch(me, other) {
@@ -55,35 +55,47 @@ function scoreMatch(me, other) {
   return { score, reasons };
 }
 
-// GET /api/users/suggestions — smart matched suggestions (must come before /:id)
+// ── Shared helper: get IDs to exclude for a given user ──────────────────────
+async function getExcludeIds(userId, blockedUsers = []) {
+  const excludeIds = [userId.toString(), ...blockedUsers.map((b) => b.toString())];
+
+  // Existing connections (bidirectional)
+  const myConns = await Connection.find({ $or: [{ user1: userId }, { user2: userId }] });
+  myConns.forEach((c) => {
+    const other = c.user1.toString() === userId.toString() ? c.user2 : c.user1;
+    excludeIds.push(other.toString());
+  });
+
+  // Any pending request — sent OR received
+  const pendingReqs = await Request.find({
+    $or: [{ from_user: userId }, { to_user: userId }],
+    status: 'pending',
+  }).select('from_user to_user');
+  pendingReqs.forEach((r) => {
+    const other = r.from_user.toString() === userId.toString() ? r.to_user : r.from_user;
+    excludeIds.push(other.toString());
+  });
+
+  return [...new Set(excludeIds)]; // deduplicate
+}
+
+// GET /api/users/suggestions — smart matched suggestions
 router.get('/suggestions', protect, async (req, res) => {
   try {
     const me = req.user;
-    const excludeIds = [me._id, ...(me.blocked_users || [])];
-
-    // Exclude people I've already sent a pending request to
-    const sentRequests = await Request.find({ from_user: me._id, status: 'pending' }).select('to_user');
-    const sentIds = sentRequests.map((r) => r.to_user);
-
-    // Exclude existing connections
-    const myConns = await Connection.find({ $or: [{ user1: me._id }, { user2: me._id }] });
-    const connectedIds = myConns.map((c) =>
-      c.user1.toString() === me._id.toString() ? c.user2 : c.user1
-    );
-
-    excludeIds.push(...sentIds, ...connectedIds);
+    const excludeIds = await getExcludeIds(me._id, me.blocked_users);
 
     // Only fetch users with at least one matching attribute
     const orConditions = [];
-    if (me.university)    orConditions.push({ university:   { $regex: `^${me.university}$`,   $options: 'i' } });
-    if (me.campus)        orConditions.push({ campus:       { $regex: `^${me.campus}$`,       $options: 'i' } });
-    if (me.city)          orConditions.push({ city:         { $regex: `^${me.city}$`,         $options: 'i' } });
-    if (me.country)       orConditions.push({ country:      { $regex: `^${me.country}$`,      $options: 'i' } });
-    if (me.intake_year)   orConditions.push({ intake_year:  me.intake_year });
-    if (me.interests?.length) orConditions.push({ interests: { $in: me.interests } });
+    if (me.university)       orConditions.push({ university:  { $regex: `^${me.university}$`,  $options: 'i' } });
+    if (me.campus)           orConditions.push({ campus:      { $regex: `^${me.campus}$`,      $options: 'i' } });
+    if (me.city)             orConditions.push({ city:        { $regex: `^${me.city}$`,        $options: 'i' } });
+    if (me.country)          orConditions.push({ country:     { $regex: `^${me.country}$`,     $options: 'i' } });
+    if (me.intake_year)      orConditions.push({ intake_year: me.intake_year });
+    if (me.interests?.length) orConditions.push({ interests:  { $in: me.interests } });
 
     const query = {
-      _id: { $nin: excludeIds },
+      _id:           { $nin: excludeIds },
       blocked_users: { $nin: [me._id] },
       ...(orConditions.length > 0 ? { $or: orConditions } : {}),
     };
@@ -121,7 +133,7 @@ router.get('/filter-options', protect, async (req, res) => {
   }
 });
 
-// GET /api/users/connections — my connections
+// GET /api/users/connections — my accepted connections
 router.get('/connections', protect, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -141,26 +153,24 @@ router.get('/connections', protect, async (req, res) => {
   }
 });
 
-// GET /api/users — discover users with filters
+// GET /api/users — discover users with filters (excludes connections + pending)
 router.get('/', protect, async (req, res) => {
   try {
     const { university, campus, city, country, interests, page = 1, limit = 20 } = req.query;
+    const userId = req.user._id;
 
-    const excludeIds = [req.user._id];
-    if (req.user.blocked_users?.length) excludeIds.push(...req.user.blocked_users);
+    const excludeIds = await getExcludeIds(userId, req.user.blocked_users);
 
     const filter = {
       _id:           { $nin: excludeIds },
-      blocked_users: { $nin: [req.user._id] },
+      blocked_users: { $nin: [userId] },
     };
 
     if (university) filter.university = { $regex: university, $options: 'i' };
     if (campus)     filter.campus     = { $regex: campus,     $options: 'i' };
     if (city)       filter.city       = { $regex: city,       $options: 'i' };
     if (country)    filter.country    = { $regex: country,    $options: 'i' };
-    if (interests) {
-      filter.interests = { $in: interests.split(',').map((i) => i.trim()) };
-    }
+    if (interests)  filter.interests  = { $in: interests.split(',').map((i) => i.trim()) };
 
     const skip  = (parseInt(page) - 1) * parseInt(limit);
     const total = await User.countDocuments(filter);
@@ -177,10 +187,10 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-// GET /api/users/:id — public profile
+// GET /api/users/:id — public profile (contact info only for accepted connections)
 router.get('/:id', protect, async (req, res) => {
   try {
-    const userId    = req.params.id;
+    const userId     = req.params.id;
     const targetUser = await User.findById(userId).select(
       'name university campus intake_year course city country interests bio showEmailToConnections email contact_info created_at'
     );
@@ -189,7 +199,6 @@ router.get('/:id', protect, async (req, res) => {
     const connected = await Connection.areConnected(req.user._id, userId);
     const profile   = targetUser.toObject();
 
-    // Strip private contact info unless connected
     if (!connected) {
       delete profile.contact_info;
       delete profile.email;
