@@ -11,7 +11,7 @@ export function initSocket(token) {
 
   socket = io(serverUrl, {
     auth: { token },
-    transports: ['websocket', 'polling'],
+    transports: ['websocket'], // Force websocket to avoid sticky-session polling issues on Render
     reconnection: true,
     reconnectionAttempts: 5,
     reconnectionDelay: 2000,
