@@ -87,7 +87,7 @@ app.use('/api/messages', messageRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', app: 'StudyConnect Global', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', app: 'Nexora', timestamp: new Date().toISOString() });
 });
 
 // ── 404 ───────────────────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ mongoose
   .then(() => {
     console.log('✅ MongoDB (Atlas) connected');
     httpServer.listen(PORT, () => {
-      console.log(`🚀 StudyConnect Global API running on port ${PORT}`);
+      console.log(`🚀 Nexora API running on port ${PORT}`);
       console.log(`📡 Socket.IO ready`);
     });
   })

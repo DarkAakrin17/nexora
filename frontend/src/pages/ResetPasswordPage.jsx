@@ -44,7 +44,7 @@ export default function ResetPasswordPage() {
         <div className="auth-brand">
           <div className="brand-icon"><Globe size={24} /></div>
           <div>
-            <h1 className="brand-title">Study<span>Connect</span></h1>
+            <h1 className="brand-title">Nex<span>ora</span></h1>
             <p className="brand-tagline">Global student networking</p>
           </div>
         </div>

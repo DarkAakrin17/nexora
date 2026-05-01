@@ -42,7 +42,7 @@ export default function LoginPage() {
         <div className="auth-brand">
           <div className="brand-icon"><Globe size={28} /></div>
           <div>
-            <h1 className="brand-title">StudyConnect <span>Global</span></h1>
+            <h1 className="brand-title">Nex<span>ora</span></h1>
             <p className="brand-tagline">Connect with students worldwide</p>
           </div>
         </div>
@@ -79,7 +79,7 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
             <p className="auth-switch">
-              New to StudyConnect? <Link to="/signup">Create account</Link>
+              New to Nexora? <Link to="/signup">Create account</Link>
             </p>
           </form>
         </div>

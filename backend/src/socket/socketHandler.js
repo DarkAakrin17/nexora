@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Message = require('../models/Message');
 const Connection = require('../models/Connection');
+const { sendNewMessageEmail } = require('../utils/email');
 
 // Map userId -> Set of socket IDs (user can have multiple tabs)
 const onlineUsers = new Map();
@@ -72,6 +73,18 @@ const setupSocket = (io) => {
 
         // Send to receiver if online
         io.to(receiverId).emit('new_message', msgData);
+
+        // ── Email notification when receiver is offline ──────────────────
+        const receiverOnline = onlineUsers.has(receiverId) && onlineUsers.get(receiverId).size > 0;
+        if (!receiverOnline && receiver.emailNotifications) {
+          // Fire-and-forget — don't block the response
+          sendNewMessageEmail({
+            toEmail: receiver.email,
+            toName:  receiver.name,
+            fromName: socket.user.name,
+            messagePreview: savedMessage.message,
+          });
+        }
 
         // Confirm back to sender
         callback?.({ success: true, message: msgData });

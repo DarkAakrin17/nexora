@@ -56,7 +56,7 @@ export default function SignupPage() {
       };
       const { data } = await api.post('/auth/signup', payload);
       login(data.user, data.token);
-      toast.success(`Welcome to StudyConnect, ${data.user.name}! 🌍`);
+      toast.success(`Welcome to Nexora, ${data.user.name}! 🌍`);
       navigate('/discover');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Signup failed.');
@@ -77,7 +77,7 @@ export default function SignupPage() {
         <div className="auth-brand">
           <div className="brand-icon"><Globe size={28} /></div>
           <div>
-            <h1 className="brand-title">StudyConnect <span>Global</span></h1>
+            <h1 className="brand-title">Nex<span>ora</span></h1>
             <p className="brand-tagline">Connect with students worldwide</p>
           </div>
         </div>
@@ -171,7 +171,7 @@ export default function SignupPage() {
                 <button type="button" className="btn btn-ghost" onClick={() => setStep(1)}>← Back</button>
                 <button id="signup-submit" type="submit" className="btn btn-primary" disabled={loading}>
                   {loading ? <Loader2 size={16} className="spin" /> : null}
-                  {loading ? 'Creating...' : 'Join StudyConnect 🌍'}
+                  {loading ? 'Creating...' : 'Join Nexora 🌍'}
                 </button>
               </div>
             </form>

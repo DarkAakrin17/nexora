@@ -36,7 +36,7 @@ export default function Navbar() {
       <div className="navbar-inner container">
         <Link to="/discover" className="navbar-brand">
           <div className="navbar-logo"><Globe size={20} /></div>
-          <span className="navbar-brand-text">StudyConnect <span>Global</span></span>
+          <span className="navbar-brand-text">Nex<span>ora</span></span>
         </Link>
 
         <div className={`navbar-links ${menuOpen ? 'open' : ''}`}>
