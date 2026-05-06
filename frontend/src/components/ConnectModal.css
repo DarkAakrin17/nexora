@@ -28,6 +28,28 @@
 }
 
 .tag-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.starter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+.starter-chip {
+  text-align: left;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text-300);
+  font-size: 0.77rem;
+  line-height: 1.45;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  transition: all var(--dur-fast) var(--ease);
+}
+.starter-chip:hover {
+  border-color: var(--border-brand);
+  background: rgba(99,102,241,0.12);
+  color: var(--text-100);
+}
 
 /* Privacy note */
 .privacy-note {

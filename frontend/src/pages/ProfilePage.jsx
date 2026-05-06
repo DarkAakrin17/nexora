@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
@@ -17,7 +17,7 @@ const INTAKE_YEARS = Array.from({ length: 6 }, (_, i) => currentYear - 1 + i);
 export default function ProfilePage() {
   const { user, updateUser, logout } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({
+  const initialForm = useMemo(() => ({
     name:                  user?.name || '',
     university:            user?.university || '',
     campus:                user?.campus || '',
@@ -37,9 +37,15 @@ export default function ProfilePage() {
     },
     showEmailToConnections: user?.showEmailToConnections || false,
     emailNotifications:    user?.emailNotifications !== false,
-  });
+  }), [user]);
+  const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+  const hasChanges = JSON.stringify(form) !== JSON.stringify(initialForm);
+
+  useEffect(() => {
+    setForm(initialForm);
+  }, [initialForm]);
 
   const set = (field) => (e) => {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -81,6 +87,18 @@ export default function ProfilePage() {
   const initials = user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
   const gradients = ['linear-gradient(135deg,#7c3aed,#06b6d4)', 'linear-gradient(135deg,#ec4899,#8b5cf6)', 'linear-gradient(135deg,#10b981,#06b6d4)'];
   const grad = gradients[user?.name?.charCodeAt(0) % gradients.length];
+  const completionChecks = [
+    form.name,
+    form.university,
+    form.course,
+    form.city,
+    form.country,
+    form.bio,
+    form.interests?.length > 0,
+  ];
+  const completionPercent = Math.round(
+    (completionChecks.filter(Boolean).length / completionChecks.length) * 100
+  );
 
   return (
     <div className="profile-page">
@@ -118,6 +136,17 @@ export default function ProfilePage() {
 
         {/* Main */}
         <main className="profile-main">
+          <div className="profile-completion card">
+            <div className="profile-completion-top">
+              <strong>Profile completeness</strong>
+              <span>{completionPercent}%</span>
+            </div>
+            <div className="profile-completion-track">
+              <span style={{ width: `${completionPercent}%` }} />
+            </div>
+            <p>Complete profile details to improve discovery matches and connection quality.</p>
+          </div>
+
           <form onSubmit={handleSave}>
             {activeTab === 'profile' && (
               <div className="profile-section card">
@@ -132,7 +161,7 @@ export default function ProfilePage() {
                   <div className="form-group">
                     <label className="form-label">Bio</label>
                     <textarea id="profile-bio" className="form-input form-textarea" value={form.bio} onChange={set('bio')} placeholder="Tell others a little about yourself..." maxLength={300} rows={3} />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'right', display: 'block', marginTop: 4 }}>{form.bio.length}/300</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--t4)', textAlign: 'right', display: 'block', marginTop: 4 }}>{form.bio.length}/300</span>
                   </div>
 
                   <div className="form-row-2">
@@ -183,6 +212,33 @@ export default function ProfilePage() {
               </div>
             )}
 
+            {activeTab === 'profile' && (
+              <div className="profile-section card">
+                <h3 className="section-title">Contact Info</h3>
+                <p className="section-sub">Shared with accepted connections only</p>
+                <div className="profile-fields">
+                  <div className="contact-info-grid">
+                    <div className="form-group">
+                      <label className="form-label">📱 WhatsApp</label>
+                      <input className="form-input" value={form.contact_info.whatsapp} onChange={(e) => setForm((f) => ({ ...f, contact_info: { ...f.contact_info, whatsapp: e.target.value } }))} placeholder="+1234567890" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">📸 Instagram</label>
+                      <input className="form-input" value={form.contact_info.instagram} onChange={(e) => setForm((f) => ({ ...f, contact_info: { ...f.contact_info, instagram: e.target.value } }))} placeholder="@handle" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">💼 LinkedIn</label>
+                      <input className="form-input" value={form.contact_info.linkedin} onChange={(e) => setForm((f) => ({ ...f, contact_info: { ...f.contact_info, linkedin: e.target.value } }))} placeholder="linkedin.com/in/..." />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">✈️ Telegram</label>
+                      <input className="form-input" value={form.contact_info.telegram} onChange={(e) => setForm((f) => ({ ...f, contact_info: { ...f.contact_info, telegram: e.target.value } }))} placeholder="@username" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'privacy' && (
               <div className="profile-section card">
                 <h3 className="section-title">Privacy & Notifications</h3>
@@ -224,9 +280,9 @@ export default function ProfilePage() {
             )}
 
             <div className="profile-save-bar">
-              <button id="profile-save" type="submit" className="btn btn-primary" disabled={loading}>
+              <button id="profile-save" type="submit" className="btn btn-primary" disabled={loading || !hasChanges}>
                 {loading ? <Loader2 size={16} className="spin" /> : <Save size={16} />}
-                {loading ? 'Saving...' : 'Save Changes'}
+                {loading ? 'Saving...' : hasChanges ? 'Save Changes' : 'Saved'}
               </button>
             </div>
           </form>

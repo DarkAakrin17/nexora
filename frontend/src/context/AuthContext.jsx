@@ -13,7 +13,8 @@ export const AuthProvider = ({ children }) => {
     if (token && user) {
       initSocket(token);
     }
-    return () => {};
+    // Bug fix #3: properly disconnect on cleanup (token change / logout)
+    return () => { if (!token) disconnectSocket(); };
   }, [token, user]);
 
   const login = (userData, jwtToken) => {

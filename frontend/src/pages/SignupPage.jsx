@@ -1,10 +1,21 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { Globe, Eye, EyeOff, Loader2 } from 'lucide-react';
 import './AuthPage.css';
+
+function getPasswordStrength(pw) {
+  if (!pw) return { level: 0, label: '', color: '' };
+  if (pw.length < 6) return { level: 1, label: 'Too short', color: '#ef4444' };
+  if (pw.length < 8) return { level: 2, label: 'Weak', color: '#f59e0b' };
+  const hasNum = /\d/.test(pw);
+  const hasSpecial = /[^a-zA-Z0-9]/.test(pw);
+  if (pw.length >= 10 && hasNum && hasSpecial) return { level: 4, label: 'Strong', color: '#10b981' };
+  if (pw.length >= 8 && (hasNum || hasSpecial)) return { level: 3, label: 'Good', color: '#38bdf8' };
+  return { level: 2, label: 'Weak', color: '#f59e0b' };
+}
 
 const INTEREST_OPTIONS = [
   'Tech', 'Art', 'Music', 'Sports', 'Travel', 'Food', 'Gaming', 'Books',
@@ -22,6 +33,7 @@ export default function SignupPage() {
     city: '', country: '', intake_year: '', interests: []
   });
   const [showPass, setShowPass] = useState(false);
+  const pwStrength = useMemo(() => getPasswordStrength(form.password), [form.password]);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -110,6 +122,14 @@ export default function SignupPage() {
                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                {form.password.length > 0 && (
+                  <div className="password-strength">
+                    <div className="password-strength-bar">
+                      <div className="password-strength-fill" style={{ width: `${pwStrength.level * 25}%`, background: pwStrength.color }} />
+                    </div>
+                    <span className="password-strength-label" style={{ color: pwStrength.color }}>{pwStrength.label}</span>
+                  </div>
+                )}
               </div>
 
               <button id="signup-next" type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: 8 }}>

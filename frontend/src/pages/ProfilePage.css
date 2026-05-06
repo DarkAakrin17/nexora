@@ -68,6 +68,39 @@
 
 /* ── Main ── */
 .profile-main { display: flex; flex-direction: column; gap: 16px; }
+.profile-completion {
+  padding: 16px 18px;
+  border: 1px solid rgba(99,102,241,0.2);
+  background: rgba(99,102,241,0.06);
+}
+.profile-completion-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.86rem;
+  margin-bottom: 10px;
+}
+.profile-completion-top strong { color: var(--text-primary); }
+.profile-completion-top span { color: var(--primary-light); font-weight: 700; }
+.profile-completion-track {
+  width: 100%;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.profile-completion-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--grad-brand);
+  transition: width var(--dur-base) var(--ease);
+}
+.profile-completion p {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
 
 .profile-section { padding: 28px; }
 .section-title { font-size: 1.2rem; margin-bottom: 4px; }
@@ -131,8 +164,16 @@
 }
 .privacy-list li::before { content: '•'; color: var(--primary-light); flex-shrink: 0; }
 
+/* ── Contact info ── */
+.contact-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
 /* ── Save bar ── */
 .profile-save-bar { display: flex; justify-content: flex-end; }
+.profile-save-bar .btn { min-width: 150px; }
 
 .spin { animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -140,7 +181,10 @@
 @media (max-width: 900px) {
   .profile-container { grid-template-columns: 1fr; }
   .profile-sidebar { position: static; }
+  .contact-info-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 500px) {
   .form-row-2 { grid-template-columns: 1fr; }
+  .profile-section { padding: 18px; }
+  .profile-save-bar .btn { width: 100%; }
 }

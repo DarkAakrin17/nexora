@@ -71,6 +71,39 @@
 .discover-title { font-size: 1.65rem; margin-bottom: 4px; color: var(--t1); }
 .discover-title span { background: var(--grad-brand); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 .discover-sub { color: var(--t4); font-size: 0.875rem; }
+.applied-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.applied-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(99,102,241,0.25);
+  background: rgba(99,102,241,0.08);
+  color: var(--indigo-light);
+  border-radius: var(--r-full);
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  line-height: 1;
+  transition: all var(--dur-fast) var(--ease);
+}
+.applied-filter-chip:hover {
+  border-color: rgba(99,102,241,0.5);
+  background: rgba(99,102,241,0.16);
+}
+.chip-label {
+  text-transform: capitalize;
+  color: var(--t4);
+}
+.chip-value {
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .filter-active { border-color: var(--border-brand) !important; color: var(--indigo-light) !important; box-shadow: 0 0 12px rgba(99,102,241,0.18) !important; }
 .filter-count {
@@ -122,6 +155,7 @@
 .user-card-footer { margin-top: auto; }
 
 .load-more { text-align: center; margin-top: 44px; }
+.load-more .btn { min-width: 160px; gap: 8px; }
 
 @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 

@@ -6,6 +6,9 @@ const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Escape regex special characters to prevent injection / errors
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 // ── Scoring weights for smart matching ──────────────────────────────────────
 const WEIGHTS = {
   same_university:  30,
@@ -79,6 +82,28 @@ async function getExcludeIds(userId, blockedUsers = []) {
   return [...new Set(excludeIds)]; // deduplicate
 }
 
+// GET /api/users/globe — lightweight user pins for the globe view
+router.get('/globe', protect, async (req, res) => {
+  try {
+    const me = req.user;
+    const excludeIds = await getExcludeIds(me._id, me.blocked_users);
+
+    const users = await User.find({
+      _id: { $nin: excludeIds },
+      blocked_users: { $nin: [me._id] },
+      $or: [{ country: { $exists: true, $ne: '' } }, { city: { $exists: true, $ne: '' } }],
+    })
+      .select('name country city university course interests intake_year')
+      .limit(600)
+      .lean();
+
+    res.json({ users });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch globe data.' });
+  }
+});
+
 // GET /api/users/suggestions — smart matched suggestions
 router.get('/suggestions', protect, async (req, res) => {
   try {
@@ -87,10 +112,10 @@ router.get('/suggestions', protect, async (req, res) => {
 
     // Only fetch users with at least one matching attribute
     const orConditions = [];
-    if (me.university)       orConditions.push({ university:  { $regex: `^${me.university}$`,  $options: 'i' } });
-    if (me.campus)           orConditions.push({ campus:      { $regex: `^${me.campus}$`,      $options: 'i' } });
-    if (me.city)             orConditions.push({ city:        { $regex: `^${me.city}$`,        $options: 'i' } });
-    if (me.country)          orConditions.push({ country:     { $regex: `^${me.country}$`,     $options: 'i' } });
+    if (me.university)       orConditions.push({ university:  { $regex: `^${escapeRegex(me.university)}$`,  $options: 'i' } });
+    if (me.campus)           orConditions.push({ campus:      { $regex: `^${escapeRegex(me.campus)}$`,      $options: 'i' } });
+    if (me.city)             orConditions.push({ city:        { $regex: `^${escapeRegex(me.city)}$`,        $options: 'i' } });
+    if (me.country)          orConditions.push({ country:     { $regex: `^${escapeRegex(me.country)}$`,     $options: 'i' } });
     if (me.intake_year)      orConditions.push({ intake_year: me.intake_year });
     if (me.interests?.length) orConditions.push({ interests:  { $in: me.interests } });
 
@@ -141,10 +166,13 @@ router.get('/connections', protect, async (req, res) => {
       $or: [{ user1: userId }, { user2: userId }],
     }).populate('user1 user2', 'name university campus intake_year course city country interests bio contact_info');
 
-    const peers = connections.map((c) => {
-      const other = c.user1._id.toString() === userId.toString() ? c.user2 : c.user1;
-      return { ...other.toObject(), connectionId: c._id, connectedAt: c.created_at };
-    });
+    const peers = connections
+      // Filter out orphaned connections where the other user was deleted
+      .filter((c) => c.user1 && c.user2)
+      .map((c) => {
+        const other = c.user1._id.toString() === userId.toString() ? c.user2 : c.user1;
+        return { ...other.toObject(), connectionId: c._id, connectedAt: c.created_at };
+      });
 
     res.json({ connections: peers });
   } catch (err) {
@@ -213,17 +241,56 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
+// DELETE /api/users/connections/:userId — remove a connection
+router.delete('/connections/:userId', protect, async (req, res) => {
+  try {
+    const otherId = req.params.userId;
+    const myId    = req.user._id;
+
+    if (otherId === myId.toString())
+      return res.status(400).json({ message: 'Cannot remove yourself.' });
+
+    const connected = await Connection.areConnected(myId, otherId);
+    if (!connected)
+      return res.status(404).json({ message: 'Connection not found.' });
+
+    // Delete connection record using canonical sorted order
+    const [u1, u2] = [myId.toString(), otherId].sort();
+    await Connection.deleteOne({ user1: u1, user2: u2 });
+
+    res.json({ message: 'Connection removed.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to remove connection.' });
+  }
+});
+
 // POST /api/users/:id/block
 router.post('/:id/block', protect, async (req, res) => {
   try {
     const targetId = req.params.id;
     if (targetId === req.user._id.toString())
       return res.status(400).json({ message: 'Cannot block yourself.' });
+
+    // Add to blocked list
     await User.findByIdAndUpdate(req.user._id, { $addToSet: { blocked_users: targetId } });
+
+    // Bug fix #2: Delete connection using canonical sorted order (same as areConnected)
     const [u1, u2] = [req.user._id.toString(), targetId].sort();
     await Connection.deleteOne({ user1: u1, user2: u2 });
+
+    // Bug fix #17: Also remove any pending requests between the two users
+    await Request.deleteMany({
+      $or: [
+        { from_user: req.user._id, to_user: targetId },
+        { from_user: targetId,     to_user: req.user._id },
+      ],
+      status: 'pending',
+    });
+
     res.json({ message: 'User blocked successfully.' });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Failed to block user.' });
   }
 });

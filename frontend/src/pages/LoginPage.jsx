@@ -68,11 +68,8 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Forgot password link */}
-            <div style={{ textAlign: 'right', marginTop: -6 }}>
-              <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--indigo-light)' }}>
-                Forgot password?
-              </Link>
+            <div className="auth-forgot">
+              <Link to="/forgot-password">Forgot password?</Link>
             </div>
             <button id="login-submit" type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: 8 }} disabled={loading}>
               {loading ? <Loader2 size={16} className="spin" /> : null}

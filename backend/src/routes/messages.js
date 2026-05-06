@@ -52,32 +52,31 @@ router.get('/', protect, async (req, res) => {
     // Get all connections
     const connections = await Connection.find({
       $or: [{ user1: myId }, { user2: myId }],
-    }).populate('user1 user2', 'name university city country');
+    }).populate('user1 user2', 'name university campus city country');
 
     const conversations = await Promise.all(
-      connections.map(async (conn) => {
-        const otherId = conn.user1._id.toString() === myId.toString() ? conn.user2._id : conn.user1._id;
-        const otherUser = conn.user1._id.toString() === myId.toString() ? conn.user2 : conn.user1;
+      connections
+        // Filter orphaned connections (deleted users) to prevent crashes
+        .filter((conn) => conn.user1 && conn.user2)
+        .map(async (conn) => {
+          const otherId   = conn.user1._id.toString() === myId.toString() ? conn.user2._id : conn.user1._id;
+          const otherUser = conn.user1._id.toString() === myId.toString() ? conn.user2 : conn.user1;
 
-        const lastMessage = await Message.findOne({
-          $or: [
-            { sender: myId, receiver: otherId },
-            { sender: otherId, receiver: myId },
-          ],
-        }).sort({ timestamp: -1 });
+          const lastMessage = await Message.findOne({
+            $or: [
+              { sender: myId,    receiver: otherId },
+              { sender: otherId, receiver: myId    },
+            ],
+          }).sort({ timestamp: -1 });
 
-        const unreadCount = await Message.countDocuments({
-          sender: otherId,
-          receiver: myId,
-          seen: false,
-        });
+          const unreadCount = await Message.countDocuments({
+            sender: otherId,
+            receiver: myId,
+            seen: false,
+          });
 
-        return {
-          user: otherUser,
-          lastMessage,
-          unreadCount,
-        };
-      })
+          return { user: otherUser, lastMessage, unreadCount };
+        })
     );
 
     // Sort by last message timestamp
