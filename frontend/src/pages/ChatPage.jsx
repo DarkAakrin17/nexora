@@ -128,8 +128,8 @@ export default function ChatPage() {
 
     const handleNewMessage = (msg) => {
       const inActiveChat =
-        (msg.sender === activeUser?._id && msg.receiver === me._id) ||
-        (msg.sender === me._id          && msg.receiver === activeUser?._id);
+        (msg.sender === activeUser?._id && msg.receiver === me?._id) ||
+        (msg.sender === me?._id          && msg.receiver === activeUser?._id);
 
       if (inActiveChat) {
         setMessages((prev) => [...prev, msg]);
@@ -169,7 +169,7 @@ export default function ChatPage() {
       socket.off('user_online_status', handleOnlineStatus);
       socket.off('messages_seen',      handleSeen);
     };
-  }, [activeUser, me._id, loadConversations]);
+  }, [activeUser, me?._id, loadConversations]);
 
   /* ── Auto-scroll ──────────────────────────────────────────────── */
   useEffect(() => {
@@ -267,7 +267,7 @@ export default function ChatPage() {
         prevDate = msgDate;
       }
 
-      const isMine = msg.sender === me._id || msg.sender?._id === me._id;
+      const isMine = msg.sender === me?._id || msg.sender?._id === me?._id;
       const nextMsg = messages[i + 1];
       const isLast  = !nextMsg || (nextMsg.sender !== msg.sender && nextMsg.sender?._id !== msg.sender?._id);
 
