@@ -216,6 +216,30 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
+// DELETE /api/users/connections/:userId — remove a connection
+router.delete('/connections/:userId', protect, async (req, res) => {
+  try {
+    const otherId = req.params.userId;
+    const myId    = req.user._id;
+
+    if (otherId === myId.toString())
+      return res.status(400).json({ message: 'Cannot remove yourself.' });
+
+    const connected = await Connection.areConnected(myId, otherId);
+    if (!connected)
+      return res.status(404).json({ message: 'Connection not found.' });
+
+    // Delete connection record using canonical sorted order
+    const [u1, u2] = [myId.toString(), otherId].sort();
+    await Connection.deleteOne({ user1: u1, user2: u2 });
+
+    res.json({ message: 'Connection removed.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to remove connection.' });
+  }
+});
+
 // POST /api/users/:id/block
 router.post('/:id/block', protect, async (req, res) => {
   try {
