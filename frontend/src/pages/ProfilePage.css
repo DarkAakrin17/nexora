@@ -68,6 +68,39 @@
 
 /* ── Main ── */
 .profile-main { display: flex; flex-direction: column; gap: 16px; }
+.profile-completion {
+  padding: 16px 18px;
+  border: 1px solid rgba(99,102,241,0.2);
+  background: rgba(99,102,241,0.06);
+}
+.profile-completion-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.86rem;
+  margin-bottom: 10px;
+}
+.profile-completion-top strong { color: var(--text-primary); }
+.profile-completion-top span { color: var(--primary-light); font-weight: 700; }
+.profile-completion-track {
+  width: 100%;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.profile-completion-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--grad-brand);
+  transition: width var(--dur-base) var(--ease);
+}
+.profile-completion p {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
 
 .profile-section { padding: 28px; }
 .section-title { font-size: 1.2rem; margin-bottom: 4px; }

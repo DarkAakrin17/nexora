@@ -9,7 +9,7 @@ const { sendPasswordResetEmail } = require('../utils/email');
 const router = express.Router();
 
 const signToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
 
 // POST /api/auth/signup
 router.post(
@@ -154,11 +154,13 @@ router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: 'Email is required.' });
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const normalized = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalized });
+
     // Always respond the same way to prevent email enumeration
     if (!user) return res.json({ message: 'If that email exists, a reset link has been sent.' });
 
-    // Generate secure random token
+    // Generate a cryptographically secure random token
     const token = crypto.randomBytes(32).toString('hex');
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
@@ -167,7 +169,19 @@ router.post('/forgot-password', async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
-    await sendPasswordResetEmail({ toEmail: user.email, toName: user.name, resetUrl });
+
+    try {
+      await sendPasswordResetEmail({ toEmail: user.email, toName: user.name, resetUrl });
+    } catch (emailErr) {
+      // Email send failed — clear the token so it doesn't stay polluting the DB
+      user.resetPasswordToken  = undefined;
+      user.resetPasswordExpiry = undefined;
+      await user.save({ validateBeforeSave: false });
+      console.error('[Auth] Forgot-password email failed:', emailErr.message);
+      return res.status(500).json({
+        message: 'Failed to send reset email. The email service may be misconfigured — please contact support.',
+      });
+    }
 
     res.json({ message: 'If that email exists, a reset link has been sent.' });
   } catch (err) {
@@ -186,17 +200,18 @@ router.post('/reset-password/:token', async (req, res) => {
     // Hash the incoming token to compare with stored hash
     const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
 
+    // Explicitly select the hidden fields so we can find and clear them
     const user = await User.findOne({
       resetPasswordToken:  hashedToken,
       resetPasswordExpiry: { $gt: new Date() }, // not expired
-    }).select('+resetPasswordToken +resetPasswordExpiry');
+    }).select('+resetPasswordToken +resetPasswordExpiry +password_hash');
 
     if (!user) return res.status(400).json({ message: 'Reset link is invalid or has expired.' });
 
     // Set new password and clear reset fields
-    user.password_hash        = password; // pre-save hook hashes it
-    user.resetPasswordToken   = null;
-    user.resetPasswordExpiry  = null;
+    user.password_hash       = password; // pre-save hook will bcrypt this
+    user.resetPasswordToken  = undefined;
+    user.resetPasswordExpiry = undefined;
     await user.save();
 
     res.json({ message: 'Password reset successfully. You can now log in.' });

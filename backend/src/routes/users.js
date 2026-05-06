@@ -6,6 +6,9 @@ const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Escape regex special characters to prevent injection / errors
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 // ── Scoring weights for smart matching ──────────────────────────────────────
 const WEIGHTS = {
   same_university:  30,
@@ -87,10 +90,10 @@ router.get('/suggestions', protect, async (req, res) => {
 
     // Only fetch users with at least one matching attribute
     const orConditions = [];
-    if (me.university)       orConditions.push({ university:  { $regex: `^${me.university}$`,  $options: 'i' } });
-    if (me.campus)           orConditions.push({ campus:      { $regex: `^${me.campus}$`,      $options: 'i' } });
-    if (me.city)             orConditions.push({ city:        { $regex: `^${me.city}$`,        $options: 'i' } });
-    if (me.country)          orConditions.push({ country:     { $regex: `^${me.country}$`,     $options: 'i' } });
+    if (me.university)       orConditions.push({ university:  { $regex: `^${escapeRegex(me.university)}$`,  $options: 'i' } });
+    if (me.campus)           orConditions.push({ campus:      { $regex: `^${escapeRegex(me.campus)}$`,      $options: 'i' } });
+    if (me.city)             orConditions.push({ city:        { $regex: `^${escapeRegex(me.city)}$`,        $options: 'i' } });
+    if (me.country)          orConditions.push({ country:     { $regex: `^${escapeRegex(me.country)}$`,     $options: 'i' } });
     if (me.intake_year)      orConditions.push({ intake_year: me.intake_year });
     if (me.interests?.length) orConditions.push({ interests:  { $in: me.interests } });
 
@@ -219,11 +222,26 @@ router.post('/:id/block', protect, async (req, res) => {
     const targetId = req.params.id;
     if (targetId === req.user._id.toString())
       return res.status(400).json({ message: 'Cannot block yourself.' });
+
+    // Add to blocked list
     await User.findByIdAndUpdate(req.user._id, { $addToSet: { blocked_users: targetId } });
+
+    // Bug fix #2: Delete connection using canonical sorted order (same as areConnected)
     const [u1, u2] = [req.user._id.toString(), targetId].sort();
     await Connection.deleteOne({ user1: u1, user2: u2 });
+
+    // Bug fix #17: Also remove any pending requests between the two users
+    await Request.deleteMany({
+      $or: [
+        { from_user: req.user._id, to_user: targetId },
+        { from_user: targetId,     to_user: req.user._id },
+      ],
+      status: 'pending',
+    });
+
     res.json({ message: 'User blocked successfully.' });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Failed to block user.' });
   }
 });

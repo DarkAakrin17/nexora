@@ -1,19 +1,45 @@
 const nodemailer = require('nodemailer');
 
+// ── Build transporter using explicit SMTP settings (more reliable than 'service' shorthand) ──
 const createTransporter = () => {
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASS;
+  const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.EMAIL_PORT) || 587;
 
-  if (!user || user.includes('your_email') || !pass || pass.includes('your_app')) {
-    console.log('[Email] Email not configured — skipping.');
+  if (!user || user.includes('your_email') || !pass || pass.includes('your_app') || pass.includes('xxxx')) {
+    console.log('[Email] Email not configured — skipping email send.');
     return null;
   }
 
   return nodemailer.createTransport({
-    service: 'gmail', // Use Gmail service (auto-sets host/port/TLS correctly)
+    host,
+    port,
+    secure: port === 465, // true for 465 (SSL), false for 587 (STARTTLS)
     auth: { user, pass },
-    tls: { rejectUnauthorized: false }, // Avoid cert issues on some cloud hosts
+    // Do NOT set rejectUnauthorized: false — Gmail certs are valid
+    pool: true,          // Reuse SMTP connections for efficiency
+    maxConnections: 3,
   });
+};
+
+// ── Verify transporter on startup (call this once at boot) ────────────────────
+const verifyEmailConfig = async () => {
+  const t = createTransporter();
+  if (!t) {
+    console.warn('[Email] ⚠️  Email service is NOT configured. Forgot-password and notifications will be unavailable.');
+    return false;
+  }
+  try {
+    await t.verify();
+    console.log('[Email] ✅ SMTP connection verified — email service ready.');
+    return true;
+  } catch (err) {
+    console.error('[Email] ❌ SMTP verification failed:', err.message);
+    console.error('[Email] ❌ Check EMAIL_USER and EMAIL_PASS in your .env file.');
+    console.error('[Email] ❌ For Gmail, use a 16-character App Password (not your account password).');
+    return false;
+  }
 };
 
 // Verify transporter — throws if not configured (used for password reset where we MUST send)
@@ -192,9 +218,13 @@ const sendNewMessageEmail = async ({ toEmail, toName, fromName, messagePreview }
 
   const chatUrl = `${process.env.FRONTEND_URL}/chat`;
   // Truncate preview for safety
-  const preview = messagePreview.length > 120
-    ? messagePreview.slice(0, 120) + '…'
-    : messagePreview;
+  // If the message looks like encrypted ciphertext (hex string), don't show it in email
+  const isEncrypted = /^[0-9a-f]{32,}(:[0-9a-f]+)*$/i.test(messagePreview.trim());
+  const preview = isEncrypted
+    ? '[Encrypted message — open Nexora to read it]'
+    : messagePreview.length > 120
+      ? messagePreview.slice(0, 120) + '…'
+      : messagePreview;
 
   const html = `
     <!DOCTYPE html>
@@ -248,4 +278,10 @@ const sendNewMessageEmail = async ({ toEmail, toName, fromName, messagePreview }
   }
 };
 
-module.exports = { sendConnectionRequestEmail, sendAcceptedEmail, sendPasswordResetEmail, sendNewMessageEmail };
+module.exports = {
+  sendConnectionRequestEmail,
+  sendAcceptedEmail,
+  sendPasswordResetEmail,
+  sendNewMessageEmail,
+  verifyEmailConfig,
+};

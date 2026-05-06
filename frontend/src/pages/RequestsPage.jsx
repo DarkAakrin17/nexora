@@ -14,17 +14,8 @@ export default function RequestsPage() {
   const [actionLoading, setActionLoading] = useState(null);
   const [searchParams] = useSearchParams();
 
-  useEffect(() => {
-    // Handle email action links: ?action=accept&requestId=xxx
-    const action = searchParams.get('action');
-    const requestId = searchParams.get('requestId');
-    if (action && requestId) {
-      if (action === 'accept') handleAccept(requestId);
-      else if (action === 'reject') handleReject(requestId);
-    }
-  }, []);
 
-  const fetchAll = async () => {
+  const fetchAll = async (processUrlAction = false) => {
     setLoading(true);
     try {
       const [incRes, outRes] = await Promise.all([
@@ -33,6 +24,17 @@ export default function RequestsPage() {
       ]);
       setIncoming(incRes.data.requests);
       setOutgoing(outRes.data.requests);
+
+      // Bug fix #1: process URL action AFTER data has loaded
+      if (processUrlAction) {
+        const action    = searchParams.get('action');
+        const requestId = searchParams.get('requestId');
+        if (action && requestId) {
+          setTab('incoming');
+          if (action === 'accept') await handleAccept(requestId);
+          else if (action === 'reject') await handleReject(requestId);
+        }
+      }
     } catch {
       toast.error('Failed to load requests.');
     } finally {
@@ -40,7 +42,7 @@ export default function RequestsPage() {
     }
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { fetchAll(true); }, []);
 
   const handleAccept = async (id) => {
     setActionLoading(id);

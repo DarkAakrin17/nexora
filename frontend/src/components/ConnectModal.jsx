@@ -1,15 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, Send, Loader2 } from 'lucide-react';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import './ConnectModal.css';
 
 const TAGS = ['accommodation', 'travel', 'same university', 'networking'];
+const STARTER_MESSAGES = [
+  "Hi! I noticed we're both planning to study abroad and would love to connect.",
+  "Hey! I'd love to exchange tips about accommodation and settling in.",
+  'Hi! I am looking to build a student support network before intake.',
+];
 
 export default function ConnectModal({ user, onClose, onSuccess }) {
   const [intro, setIntro] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [loading, setLoading] = useState(false);
+  const introRef = useRef(null);
+
+  useEffect(() => {
+    introRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   const toggleTag = (tag) => {
     setSelectedTags((prev) =>
@@ -57,6 +75,7 @@ export default function ConnectModal({ user, onClose, onSuccess }) {
             <label className="form-label">Intro Message *</label>
             <textarea
               id="connect-intro"
+              ref={introRef}
               className="form-input form-textarea"
               placeholder={`Hi ${user.name?.split(' ')[0]}! I'm studying abroad too and would love to connect...`}
               value={intro}
@@ -69,12 +88,28 @@ export default function ConnectModal({ user, onClose, onSuccess }) {
           </div>
 
           <div className="form-group">
+            <label className="form-label">Quick starters</label>
+            <div className="starter-group">
+              {STARTER_MESSAGES.map((msg) => (
+                <button
+                  key={msg}
+                  type="button"
+                  className="starter-chip"
+                  onClick={() => setIntro(msg)}
+                >
+                  {msg}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-group">
             <label className="form-label">Looking for (optional)</label>
             <div className="tag-group">
               {TAGS.map((tag) => (
                 <span
                   key={tag}
-                  id={`tag-${tag.replace(' ', '-')}`}
+                  id={`tag-${tag.replaceAll(' ', '-')}`}
                   className={`tag tag-selectable ${selectedTags.includes(tag) ? 'selected' : ''}`}
                   onClick={() => toggleTag(tag)}
                 >

@@ -55,7 +55,8 @@ export default function DiscoverPage() {
       const params = new URLSearchParams({ page: currentPage, limit: 12 });
       Object.entries(currentFilters).forEach(([k, v]) => v && params.set(k, v));
       const { data } = await api.get(`/users?${params}`);
-      setUsers(currentPage === 1 ? data.users : (prev) => [...prev, ...data.users]);
+      // Bug fix: use functional updater correctly for load-more pagination
+      setUsers((prev) => currentPage === 1 ? data.users : [...prev, ...data.users]);
       setTotalPages(data.pages);
       setPage(currentPage);
     } catch {
@@ -65,11 +66,18 @@ export default function DiscoverPage() {
     }
   }, [applied]);
 
-  useEffect(() => { fetchUsers(1); }, [applied]);
+  // Bug fix: include fetchUsers in dep array
+  useEffect(() => { fetchUsers(1); }, [applied, fetchUsers]);
 
   const applyFilters = () => { setApplied({ ...filters }); setShowFilters(false); };
   const clearFilters = () => { setFilters({ university: '', campus: '', city: '', country: '' }); setApplied({}); };
   const activeFilterCount = Object.values(applied).filter(Boolean).length;
+  const activeFilterEntries = Object.entries(applied).filter(([, value]) => Boolean(value));
+
+  const removeAppliedFilter = (key) => {
+    setFilters((prev) => ({ ...prev, [key]: '' }));
+    setApplied((prev) => ({ ...prev, [key]: '' }));
+  };
 
   const handleConnectSuccess = (targetId) => {
     setSentRequests((prev) => new Set([...prev, targetId]));
@@ -120,7 +128,10 @@ export default function DiscoverPage() {
         <div className="discover-header">
           <div>
             <h1 className="discover-title">All Students <span>Worldwide</span></h1>
-            <p className="discover-sub">Browse and connect with international students</p>
+            <p className="discover-sub">
+              Browse and connect with international students
+              {users.length > 0 ? ` · ${users.length} shown${page < totalPages ? ' (more available)' : ''}` : ''}
+            </p>
           </div>
           <button
             id="toggle-filters"
@@ -132,6 +143,24 @@ export default function DiscoverPage() {
             <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: showFilters ? 'rotate(180deg)' : 'none' }} />
           </button>
         </div>
+
+        {activeFilterEntries.length > 0 && (
+          <div className="applied-filters" aria-label="Active filters">
+            {activeFilterEntries.map(([key, value]) => (
+              <button
+                key={key}
+                type="button"
+                className="applied-filter-chip"
+                onClick={() => removeAppliedFilter(key)}
+                title={`Remove ${key} filter`}
+              >
+                <span className="chip-label">{key.replace('_', ' ')}</span>
+                <span className="chip-value">{value}</span>
+                <X size={12} />
+              </button>
+            ))}
+          </div>
+        )}
 
         {showFilters && (
           <div className="filter-panel glass-card">

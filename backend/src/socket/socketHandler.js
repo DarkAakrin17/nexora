@@ -52,9 +52,14 @@ const setupSocket = (io) => {
           return callback?.({ error: 'You must be connected to chat.' });
         }
 
-        // Check blocked
-        const receiver = await User.findById(receiverId);
+        // Check blocked — either direction
+        const receiver = await User.findById(receiverId).select('blocked_users emailNotifications email name');
         if (!receiver) return callback?.({ error: 'User not found.' });
+
+        const senderBlocked = receiver.blocked_users?.some((b) => b.toString() === userId);
+        if (senderBlocked) {
+          return callback?.({ error: 'Unable to send message.' }); // don't reveal reason
+        }
 
         const savedMessage = await Message.create({
           sender: userId,

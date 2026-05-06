@@ -18,7 +18,15 @@ export default function ForgotPasswordPage() {
       await api.post('/auth/forgot-password', { email });
       setSent(true);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Something went wrong.');
+      const msg = err.response?.data?.message || 'Something went wrong.';
+      // Show a friendly message for server-side email failures
+      if (err.response?.status === 500) {
+        toast.error('Email delivery failed. Please try again later or contact support.');
+      } else if (err.response?.status === 429) {
+        toast.error('Too many requests. Please wait 15 minutes and try again.');
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -52,11 +60,21 @@ export default function ForgotPasswordPage() {
                 we've sent a password reset link. It expires in <strong style={{ color: 'var(--t2)' }}>1 hour</strong>.
               </p>
               <p style={{ color: 'var(--t4)', fontSize: '0.78rem', marginTop: 12 }}>
-                Check your spam folder if you don't see it.
+                Check your spam/junk folder if you don't see it within a few minutes.
               </p>
-              <Link to="/login" className="btn btn-primary btn-lg" style={{ marginTop: 24, display: 'inline-flex' }}>
-                <ArrowLeft size={16} /> Back to Login
-              </Link>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24, flexWrap: 'wrap' }}>
+                <Link to="/login" className="btn btn-primary btn-lg" style={{ display: 'inline-flex' }}>
+                  <ArrowLeft size={16} /> Back to Login
+                </Link>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-lg"
+                  style={{ display: 'inline-flex' }}
+                  onClick={() => { setSent(false); setEmail(''); }}
+                >
+                  Try a different email
+                </button>
+              </div>
             </div>
           ) : (
             <form className="auth-form" onSubmit={handleSubmit}>

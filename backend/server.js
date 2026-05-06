@@ -12,6 +12,7 @@ const userRoutes    = require('./src/routes/users');
 const requestRoutes = require('./src/routes/requests');
 const messageRoutes = require('./src/routes/messages');
 const setupSocket   = require('./src/socket/socketHandler');
+const { verifyEmailConfig } = require('./src/utils/email');
 
 const app        = express();
 const httpServer = http.createServer(app);
@@ -75,9 +76,17 @@ const authLimiter = rateLimit({
   message: { message: 'Too many login attempts. Try again later.' },
 });
 
+// Very strict limiter for forgot-password — prevents email enumeration & spam
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: 'Too many password reset requests. Please wait 15 minutes and try again.' },
+});
+
 app.use('/api/', globalLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/signup', authLimiter);
+app.use('/api/auth/forgot-password', forgotPasswordLimiter);
 
 // ── Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth',     authRoutes);
@@ -108,8 +117,10 @@ setupSocket(io);
 const PORT = process.env.PORT || 5001;
 mongoose
   .connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 })
-  .then(() => {
+  .then(async () => {
     console.log('✅ MongoDB (Atlas) connected');
+    // Verify email config immediately so startup logs show if email is broken
+    await verifyEmailConfig();
     httpServer.listen(PORT, () => {
       console.log(`🚀 Nexora API running on port ${PORT}`);
       console.log(`📡 Socket.IO ready`);
