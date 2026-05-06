@@ -795,3 +795,39 @@
 @media (min-width: 701px) {
   .input-hint { display: block; }
 }
+
+/* ── Jump-to-latest button ── */
+.jump-to-latest {
+  position: absolute;
+  bottom: 76px;
+  right: 24px;
+  z-index: 5;
+  background: var(--grad-brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-full);
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--glow-btn);
+  animation: fadeUp 0.2s var(--ease);
+  transition: transform var(--dur-fast) var(--spring), box-shadow var(--dur-fast);
+}
+.jump-to-latest:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(99,102,241,0.6);
+}
+
+/* ── Avatar in chat header — ring ── */
+.chat-header .avatar {
+  box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 4px rgba(99,102,241,0.3);
+}
+
+/* ── Improved avatar sizing for chat component ── */
+.avatar.avatar-sm  { width: 32px;  height: 32px;  font-size: 0.72rem; }
+.avatar.avatar-md  { width: 42px;  height: 42px;  font-size: 0.88rem; }
+.avatar.avatar-lg  { width: 56px;  height: 56px;  font-size: 1.1rem;  }
+

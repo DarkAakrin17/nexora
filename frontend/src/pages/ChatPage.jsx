@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { getSocket } from '../lib/socket';
 import { useAuth } from '../context/AuthContext';
-import { Send, ArrowLeft, Circle } from 'lucide-react';
+import { Send, ArrowLeft, Circle, ChevronsDown } from 'lucide-react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import './ChatPage.css';
 
@@ -74,6 +74,8 @@ export default function ChatPage() {
   const messagesEndRef    = useRef(null);
   const typingTimeoutRef  = useRef(null);
   const textareaRef       = useRef(null);
+  const chatScrollRef     = useRef(null);
+  const [showJump,        setShowJump]        = useState(false);
 
   /* ── Load conversations ─────────────────────────────────────────── */
   const loadConversations = useCallback(async () => {
@@ -102,11 +104,22 @@ export default function ChatPage() {
 
   /* ── Navigate from URL param ──────────────────────────────────── */
   useEffect(() => {
-    if (userId && conversations.length > 0) {
+    if (!userId) return;
+
+    // Check if already in conversations list (has prior messages)
+    if (conversations.length > 0) {
       const conv = conversations.find((c) => c.user._id === userId);
-      if (conv) setActiveUser(conv.user);
+      if (conv) { setActiveUser(conv.user); return; }
     }
-  }, [userId, conversations]);
+
+    // Fallback: connection with no messages yet — fetch profile directly
+    // Only fires after convLoading is done so we don't double-fetch
+    if (!convLoading) {
+      api.get(`/users/${userId}`)
+        .then(({ data }) => { if (data.user) setActiveUser(data.user); })
+        .catch(() => {});
+    }
+  }, [userId, conversations, convLoading]);
 
   /* ── Socket listeners ─────────────────────────────────────────── */
   useEffect(() => {
@@ -160,8 +173,26 @@ export default function ChatPage() {
 
   /* ── Auto-scroll ──────────────────────────────────────────────── */
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = chatScrollRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distFromBottom < 200) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      setShowJump(true);
+    }
   }, [messages, typing]);
+
+  const jumpToLatest = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowJump(false);
+  };
+
+  const handleScroll = (e) => {
+    const el = e.currentTarget;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowJump(distFromBottom > 300);
+  };
 
   /* ── Auto-resize textarea ─────────────────────────────────────── */
   useEffect(() => {
@@ -380,7 +411,7 @@ export default function ChatPage() {
             </div>
 
             {/* Messages */}
-            <div className="chat-messages">
+            <div className="chat-messages" ref={chatScrollRef} onScroll={handleScroll}>
               {msgLoading ? (
                 <div className="msg-loading">Loading messages…</div>
               ) : messages.length === 0 ? (
@@ -415,6 +446,13 @@ export default function ChatPage() {
 
               <div ref={messagesEndRef} />
             </div>
+
+            {/* Jump to latest */}
+            {showJump && (
+              <button className="jump-to-latest" onClick={jumpToLatest}>
+                <ChevronsDown size={14} /> Latest
+              </button>
+            )}
 
             {/* Input bar */}
             <div className="chat-input-bar">

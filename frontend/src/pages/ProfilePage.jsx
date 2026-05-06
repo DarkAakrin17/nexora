@@ -212,6 +212,33 @@ export default function ProfilePage() {
               </div>
             )}
 
+            {activeTab === 'profile' && (
+              <div className="profile-section card">
+                <h3 className="section-title">Contact Info</h3>
+                <p className="section-sub">Shared with accepted connections only</p>
+                <div className="profile-fields">
+                  <div className="contact-info-grid">
+                    <div className="form-group">
+                      <label className="form-label">📱 WhatsApp</label>
+                      <input className="form-input" value={form.contact_info.whatsapp} onChange={(e) => setForm((f) => ({ ...f, contact_info: { ...f.contact_info, whatsapp: e.target.value } }))} placeholder="+1234567890" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">📸 Instagram</label>
+                      <input className="form-input" value={form.contact_info.instagram} onChange={(e) => setForm((f) => ({ ...f, contact_info: { ...f.contact_info, instagram: e.target.value } }))} placeholder="@handle" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">💼 LinkedIn</label>
+                      <input className="form-input" value={form.contact_info.linkedin} onChange={(e) => setForm((f) => ({ ...f, contact_info: { ...f.contact_info, linkedin: e.target.value } }))} placeholder="linkedin.com/in/..." />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">✈️ Telegram</label>
+                      <input className="form-input" value={form.contact_info.telegram} onChange={(e) => setForm((f) => ({ ...f, contact_info: { ...f.contact_info, telegram: e.target.value } }))} placeholder="@username" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'privacy' && (
               <div className="profile-section card">
                 <h3 className="section-title">Privacy & Notifications</h3>

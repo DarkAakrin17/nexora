@@ -68,13 +68,14 @@
 /* User pill */
 .nav-user {
   display: flex; align-items: center; gap: 7px;
-  padding: 5px 13px; background: var(--glass-2);
+  padding: 4px 12px 4px 4px; background: var(--glass-2);
   border: 1px solid var(--border); border-radius: var(--r-full);
   color: var(--t3); font-size: 0.82rem; font-weight: 500;
   cursor: pointer; margin-left: 6px;
   transition: all var(--dur-base) var(--ease);
 }
 .nav-user:hover { border-color: rgba(239,68,68,0.35); color: #fca5a5; background: rgba(239,68,68,0.07); }
+.nav-avatar { font-size: 0.68rem !important; }
 .nav-user-name { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .navbar-hamburger {

@@ -82,6 +82,28 @@ async function getExcludeIds(userId, blockedUsers = []) {
   return [...new Set(excludeIds)]; // deduplicate
 }
 
+// GET /api/users/globe — lightweight user pins for the globe view
+router.get('/globe', protect, async (req, res) => {
+  try {
+    const me = req.user;
+    const excludeIds = await getExcludeIds(me._id, me.blocked_users);
+
+    const users = await User.find({
+      _id: { $nin: excludeIds },
+      blocked_users: { $nin: [me._id] },
+      $or: [{ country: { $exists: true, $ne: '' } }, { city: { $exists: true, $ne: '' } }],
+    })
+      .select('name country city university course interests intake_year')
+      .limit(600)
+      .lean();
+
+    res.json({ users });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch globe data.' });
+  }
+});
+
 // GET /api/users/suggestions — smart matched suggestions
 router.get('/suggestions', protect, async (req, res) => {
   try {
@@ -144,10 +166,13 @@ router.get('/connections', protect, async (req, res) => {
       $or: [{ user1: userId }, { user2: userId }],
     }).populate('user1 user2', 'name university campus intake_year course city country interests bio contact_info');
 
-    const peers = connections.map((c) => {
-      const other = c.user1._id.toString() === userId.toString() ? c.user2 : c.user1;
-      return { ...other.toObject(), connectionId: c._id, connectedAt: c.created_at };
-    });
+    const peers = connections
+      // Filter out orphaned connections where the other user was deleted
+      .filter((c) => c.user1 && c.user2)
+      .map((c) => {
+        const other = c.user1._id.toString() === userId.toString() ? c.user2 : c.user1;
+        return { ...other.toObject(), connectionId: c._id, connectedAt: c.created_at };
+      });
 
     res.json({ connections: peers });
   } catch (err) {

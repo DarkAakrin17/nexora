@@ -1,0 +1,184 @@
+/* ══ GLOBE DISCOVER PAGE ═══════════════════════════════════════════ */
+.globe-page {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+  background: #000510;
+}
+
+.globe-canvas-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.globe-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: rgba(255,255,255,0.45);
+  font-size: 0.875rem;
+}
+
+/* ── Top bar ────────────────────────────────────────────────────── */
+.globe-topbar {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 20;
+  width: min(680px, calc(100vw - 32px));
+}
+
+.globe-search-wrap { position: relative; flex: 1; }
+.globe-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.35); pointer-events: none; }
+.globe-search {
+  width: 100%; padding: 10px 34px 10px 36px;
+  background: rgba(4, 8, 24, 0.78); backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.14); border-radius: 999px;
+  color: #fff; font-size: 0.84rem; font-family: 'Inter', sans-serif; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.globe-search::placeholder { color: rgba(255,255,255,0.3); }
+.globe-search:focus { border-color: rgba(99,102,241,0.55); box-shadow: 0 0 0 3px rgba(99,102,241,0.14); }
+.globe-search-clear {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: rgba(255,255,255,0.1); border: none; border-radius: 50%;
+  color: rgba(255,255,255,0.55); width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.globe-search-clear:hover { background: rgba(255,255,255,0.18); }
+
+.globe-filter-btn {
+  display: flex; align-items: center; gap: 6px; padding: 9px 15px;
+  background: rgba(4, 8, 24, 0.78); backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.14); border-radius: 999px;
+  color: rgba(255,255,255,0.65); font-size: 0.8rem; font-weight: 500;
+  font-family: 'Inter', sans-serif; cursor: pointer; white-space: nowrap;
+  transition: all 0.2s;
+}
+.globe-filter-btn:hover, .globe-filter-btn.active { border-color: rgba(99,102,241,0.5); color: #c7d2fe; background: rgba(99,102,241,0.18); }
+.globe-filter-badge {
+  background: linear-gradient(135deg,#6366f1,#0ea5e9); color: #fff;
+  font-size: 0.6rem; font-weight: 800; min-width: 16px; height: 16px;
+  border-radius: 999px; display: flex; align-items: center; justify-content: center; padding: 0 3px;
+}
+
+.globe-count-pill {
+  display: flex; align-items: center; gap: 6px; padding: 9px 14px;
+  background: rgba(4, 8, 24, 0.78); backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 999px;
+  color: rgba(255,255,255,0.55); font-size: 0.77rem; white-space: nowrap;
+}
+.globe-count-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #10b981; box-shadow: 0 0 7px #10b981;
+  animation: pulseDot 2s infinite;
+}
+@keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+/* ── Filter panel ───────────────────────────────────────────────── */
+.globe-filter-panel {
+  position: absolute; top: 68px; left: 50%; transform: translateX(-50%);
+  width: min(500px, calc(100vw - 32px));
+  background: rgba(4, 8, 24, 0.92); backdrop-filter: blur(28px);
+  border: 1px solid rgba(255,255,255,0.11); border-radius: 18px;
+  padding: 20px; z-index: 20;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  animation: fadeUp 0.2s ease;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity:1; transform: translateX(-50%) translateY(0); }
+}
+.globe-filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.globe-filter-panel .form-label { color: rgba(255,255,255,0.55); }
+.globe-filter-panel .form-input { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); color: #fff; }
+.globe-filter-panel .form-input::placeholder { color: rgba(255,255,255,0.25); }
+.globe-filter-panel .form-input:focus { border-color: rgba(99,102,241,0.5); background: rgba(99,102,241,0.08); }
+.globe-filter-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ── User / country card ────────────────────────────────────────── */
+.globe-user-card {
+  position: absolute; top: 50%; right: 22px; transform: translateY(-50%);
+  width: 296px;
+  background: rgba(5, 10, 26, 0.92); backdrop-filter: blur(32px);
+  border: 1px solid rgba(255,255,255,0.11); border-radius: 22px;
+  padding: 22px; z-index: 20;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+  animation: slideInR 0.28s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes slideInR { from { opacity:0; transform: translateY(-50%) translateX(24px); } to { opacity:1; transform: translateY(-50%) translateX(0); } }
+
+.globe-card-close {
+  position: absolute; top: 14px; right: 14px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50%; color: rgba(255,255,255,0.45); width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s;
+}
+.globe-card-close:hover { background: rgba(255,255,255,0.16); color: #fff; }
+
+.globe-card-header { display: flex; align-items: center; gap: 13px; margin-bottom: 14px; }
+.globe-card-name { font-size: 1rem; font-weight: 700; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; }
+.globe-card-course { font-size: 0.73rem; color: rgba(99,102,241,0.9); margin-top: 3px; }
+.globe-card-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.globe-meta-item { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; color: rgba(255,255,255,0.45); }
+.globe-card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+.globe-card-tags .tag { font-size: 0.68rem; padding: 2px 8px; background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.2); color: #a5b4fc; }
+.globe-card-country-badge {
+  display: inline-block; font-size: 0.69rem; font-weight: 800; color: #000;
+  padding: 3px 12px; border-radius: 999px; letter-spacing: 0.04em;
+}
+.globe-card-actions { display: flex; gap: 8px; }
+.globe-msg-btn { padding: 9px 12px; color: rgba(255,255,255,0.45); border-color: rgba(255,255,255,0.1); }
+.globe-msg-btn:hover { color: #fff; border-color: rgba(255,255,255,0.22); }
+
+.globe-mini-student {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 12px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer; margin-bottom: 6px; transition: background 0.15s;
+}
+.globe-mini-student:hover { background: rgba(255,255,255,0.09); }
+
+/* ── Globe tooltip (injected into DOM by react-globe.gl) ──────── */
+.globe-tip {
+  background: rgba(4,8,24,0.95);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-family: 'Inter', sans-serif;
+  pointer-events: none;
+  min-width: 120px;
+}
+.globe-tip strong { display: block; font-size: 0.83rem; color: #fff; margin-bottom: 3px; }
+.globe-tip span { font-size: 0.73rem; color: rgba(255,255,255,0.55); }
+
+/* ── Legend ─────────────────────────────────────────────────────── */
+.globe-legend {
+  position: absolute; bottom: 22px; left: 16px;
+  display: flex; flex-direction: column; gap: 4px; z-index: 20;
+}
+.globe-legend-item {
+  display: flex; align-items: center; gap: 7px; min-width: 140px;
+  font-size: 0.71rem; color: rgba(255,255,255,0.6);
+  padding: 3px 8px; border-radius: 6px; transition: background 0.15s; cursor: default;
+}
+.globe-legend-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+.globe-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Mobile ─────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .globe-topbar { top: 10px; }
+  .globe-count-pill { display: none; }
+  .globe-user-card { top: auto; bottom: 16px; right: 10px; left: 10px; width: auto; transform: none; animation: slideUp 0.28s cubic-bezier(0.34,1.56,0.64,1); }
+  @keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: none; } }
+  .globe-legend, .globe-filter-row { display: none; }
+}

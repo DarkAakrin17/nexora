@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
-import { Globe, Users, MessageCircle, Bell, User, LogOut, Menu, X, Search } from 'lucide-react';
+import { Globe, Users, MessageCircle, Bell, User, LogOut, Menu, X, Globe2 } from 'lucide-react';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -11,6 +11,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [pendingCount, setPendingCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     if (!user) return;
@@ -19,12 +20,30 @@ export default function Navbar() {
       .catch(() => {});
   }, [user, location.pathname]);
 
+  // Close mobile menu on click-outside
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
+  // Close mobile menu on route change
+  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+
   const navLinks = [
-    { to: '/discover', icon: <Search size={18} />, label: 'Discover' },
-    { to: '/requests', icon: <Bell size={18} />, label: 'Requests', badge: pendingCount },
-    { to: '/chat', icon: <MessageCircle size={18} />, label: 'Messages' },
-    { to: '/profile', icon: <User size={18} />, label: 'Profile' },
+    { to: '/discover',     icon: <Globe2 size={17} />,        label: 'Discover'     },
+    { to: '/requests',     icon: <Bell size={17} />,           label: 'Requests', badge: pendingCount },
+    { to: '/connections',  icon: <Users size={17} />,          label: 'Connections'  },
+    { to: '/chat',         icon: <MessageCircle size={17} />,  label: 'Messages'     },
+    { to: '/profile',      icon: <User size={17} />,           label: 'Profile'      },
   ];
+
+  const initials = user?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() ?? '?';
 
   const handleLogout = () => {
     logout();
@@ -32,7 +51,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="navbar">
+    <nav className="navbar" ref={menuRef}>
       <div className="navbar-inner container">
         <Link to="/discover" className="navbar-brand">
           <div className="navbar-logo"><Globe size={20} /></div>
@@ -56,14 +75,18 @@ export default function Navbar() {
           <div className="nav-divider-mobile" />
 
           <button className="nav-user" onClick={handleLogout}>
-            <div className="avatar avatar-sm">{user?.name?.[0]?.toUpperCase()}</div>
+            <div className="avatar avatar-sm nav-avatar">{initials}</div>
             <span className="nav-user-name">{user?.name?.split(' ')[0]}</span>
-            <LogOut size={15} />
+            <LogOut size={14} />
           </button>
         </div>
 
-        <button className="navbar-hamburger" onClick={() => setMenuOpen(!menuOpen)}>
-          {menuOpen ? <X size={22} /> : <Menu size={22} />}
+        <button
+          className="navbar-hamburger"
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+        >
+          {menuOpen ? <X size={21} /> : <Menu size={21} />}
         </button>
       </div>
     </nav>
