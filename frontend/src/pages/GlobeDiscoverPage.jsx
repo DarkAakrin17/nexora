@@ -30,12 +30,16 @@ const ADMIN_NAME_FIX = {
 const normalizeAdmin = (admin) =>
   normalizeCountryKey(ADMIN_NAME_FIX[admin] || admin);
 
-const COUNTRIES_URL = 'https://cdn.jsdelivr.net/gh/datasets/geo-countries@main/data/countries.geojson';
+// Lightweight Natural Earth 110m (~300KB vs ~23MB for datasets/geo-countries)
+const COUNTRIES_URL = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson';
 // Module-level cache — fetched once per session
 let _geoCache = null;
 const fetchCountries = () => {
   if (_geoCache) return Promise.resolve(_geoCache);
-  return fetch(COUNTRIES_URL).then((r) => r.json()).then((d) => { _geoCache = d; return d; }).catch(() => ({ features: [] }));
+  return fetch(COUNTRIES_URL)
+    .then((r) => r.json())
+    .then((d) => { _geoCache = d; return d; })
+    .catch(() => ({ features: [] }));
 };
 
 const GRAD = ['linear-gradient(135deg,#6366f1,#0ea5e9)', 'linear-gradient(135deg,#ec4899,#8b5cf6)', 'linear-gradient(135deg,#10b981,#06b6d4)', 'linear-gradient(135deg,#f59e0b,#ef4444)'];
