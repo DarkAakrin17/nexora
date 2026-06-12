@@ -11,6 +11,7 @@ import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import { Loader2 } from 'lucide-react';
 
 // Heavy pages — lazy-loaded so Three.js / react-globe.gl only download on demand
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="/signup"          element={<PublicRoute><SignupPage /></PublicRoute>} />
           <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
 
           {/* Private */}
           <Route path="/discover"     element={<PrivateRoute><AppLayout><Suspense fallback={<GlobeFallback />}><GlobeDiscoverPage /></Suspense></AppLayout></PrivateRoute>} />

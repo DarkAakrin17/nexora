@@ -4,7 +4,7 @@ const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
-const { sendPasswordResetEmail } = require('../utils/email');
+const { sendPasswordResetEmail, sendVerificationEmail } = require('../utils/email');
 
 const router = express.Router();
 
@@ -33,6 +33,10 @@ router.post(
         return res.status(400).json({ message: 'An account with this email already exists.' });
       }
 
+      // Generate verification token
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+
       const user = await User.create({
         name,
         email,
@@ -43,29 +47,20 @@ router.post(
         city: city || '',
         country: country || '',
         interests: interests || [],
+        isVerified: false,
+        verificationToken: hashedToken,
+        verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       });
 
-      const token = signToken(user._id);
+      // Send verification email
+      const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
+      const verifyUrl = `${frontendUrl}/verify-email/${verificationToken}`;
+      sendVerificationEmail({ toEmail: email, toName: name, verifyUrl });
 
       res.status(201).json({
-        token,
-        user: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          university: user.university,
-          campus: user.campus,
-          course: user.course,
-          city: user.city,
-          country: user.country,
-          intake_year: user.intake_year,
-          interests: user.interests,
-          bio: user.bio,
-          contact_info: user.contact_info,
-          showEmailToConnections: user.showEmailToConnections,
-          emailNotifications: user.emailNotifications,
-          created_at: user.created_at,
-        },
+        message: 'Account created! Please check your email to verify your account.',
+        needsVerification: true,
+        email: user.email,
       });
     } catch (err) {
       console.error(err);
@@ -97,6 +92,15 @@ router.post(
       const isMatch = await user.comparePassword(password);
       if (!isMatch) {
         return res.status(401).json({ message: 'Invalid email or password.' });
+      }
+
+      // Check email verification
+      if (!user.isVerified) {
+        return res.status(403).json({
+          message: 'Please verify your email before logging in.',
+          needsVerification: true,
+          email: user.email,
+        });
       }
 
       const token = signToken(user._id);
@@ -151,6 +155,90 @@ router.put('/profile', protect, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to update profile.' });
+  }
+});
+
+// GET /api/auth/verify-email/:token
+router.get('/verify-email/:token', async (req, res) => {
+  try {
+    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+
+    const user = await User.findOne({
+      verificationToken: hashedToken,
+      verificationTokenExpires: { $gt: Date.now() },
+    }).select('+verificationToken +verificationTokenExpires');
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired verification link.' });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = null;
+    user.verificationTokenExpires = null;
+    await user.save();
+
+    // Auto-login after verification
+    const token = signToken(user._id);
+
+    res.json({
+      message: 'Email verified successfully!',
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        university: user.university,
+        campus: user.campus,
+        course: user.course,
+        city: user.city,
+        country: user.country,
+        intake_year: user.intake_year,
+        interests: user.interests,
+        bio: user.bio,
+        contact_info: user.contact_info,
+        showEmailToConnections: user.showEmailToConnections,
+        emailNotifications: user.emailNotifications,
+        created_at: user.created_at,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// POST /api/auth/resend-verification
+router.post('/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required.' });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Don't reveal whether email exists
+      return res.json({ message: 'If an account exists, a verification email has been sent.' });
+    }
+
+    if (user.isVerified) {
+      return res.json({ message: 'This account is already verified. You can log in.' });
+    }
+
+    // Generate new token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+
+    user.verificationToken = hashedToken;
+    user.verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await user.save();
+
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
+    const verifyUrl = `${frontendUrl}/verify-email/${verificationToken}`;
+    sendVerificationEmail({ toEmail: user.email, toName: user.name, verifyUrl });
+
+    res.json({ message: 'Verification email sent! Please check your inbox.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error.' });
   }
 });
 

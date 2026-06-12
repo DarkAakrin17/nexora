@@ -90,6 +90,10 @@ const userSchema = new mongoose.Schema({
   // Password reset
   resetPasswordToken:  { type: String, default: null, select: false },
   resetPasswordExpiry: { type: Date,   default: null, select: false },
+  // Email verification
+  isVerified:              { type: Boolean, default: false },
+  verificationToken:       { type: String,  default: null, select: false },
+  verificationTokenExpires: { type: Date,   default: null, select: false },
   created_at: {
     type: Date,
     default: Date.now,

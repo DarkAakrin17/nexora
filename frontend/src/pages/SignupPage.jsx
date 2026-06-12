@@ -35,6 +35,8 @@ export default function SignupPage() {
   const [showPass, setShowPass] = useState(false);
   const pwStrength = useMemo(() => getPasswordStrength(form.password), [form.password]);
   const [loading, setLoading] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
+  const [resending, setResending] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -67,13 +69,31 @@ export default function SignupPage() {
         intake_year: form.intake_year ? parseInt(form.intake_year) : undefined,
       };
       const { data } = await api.post('/auth/signup', payload);
-      login(data.user, data.token);
-      toast.success(`Welcome to Nexora, ${data.user.name}! 🌍`);
-      navigate('/discover');
+      if (data.needsVerification) {
+        setSignupEmail(data.email);
+        setStep(4); // show "check your email" state
+        toast.success('Account created! Check your email to verify.');
+      } else if (data.token && data.user) {
+        login(data.user, data.token);
+        toast.success(`Welcome to Nexora, ${data.user.name}! 🌍`);
+        navigate('/discover');
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Signup failed.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      await api.post('/auth/resend-verification', { email: signupEmail });
+      toast.success('Verification email resent! Check your inbox.');
+    } catch {
+      toast.error('Failed to resend. Try again later.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -195,6 +215,24 @@ export default function SignupPage() {
                 </button>
               </div>
             </form>
+          )}
+
+          {step === 4 && (
+            <div className="auth-success">
+              <div className="auth-success-icon" style={{ background: 'rgba(99,102,241,0.12)', borderColor: 'rgba(99,102,241,0.25)' }}>
+                <span style={{ fontSize: '2rem' }}>📧</span>
+              </div>
+              <h2>Check Your Email</h2>
+              <p>We sent a verification link to <strong style={{ color: 'var(--indigo-light)' }}>{signupEmail}</strong></p>
+              <p style={{ fontSize: '0.82rem', color: 'var(--t4)' }}>Click the link in the email to activate your account. The link expires in 24 hours.</p>
+              <div className="auth-success-actions">
+                <button className="btn btn-secondary" onClick={handleResend} disabled={resending}>
+                  {resending ? <Loader2 size={14} className="spin" /> : null}
+                  {resending ? 'Sending…' : 'Resend Email'}
+                </button>
+                <Link to="/login" className="btn btn-primary">Go to Login</Link>
+              </div>
+            </div>
           )}
         </div>
       </div>

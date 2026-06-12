@@ -293,10 +293,72 @@ const sendNewMessageEmail = async ({ toEmail, toName, fromName, messagePreview }
   }
 };
 
+// ── Send email verification ──────────────────────────────────────────────────
+const sendVerificationEmail = async ({ toEmail, toName, verifyUrl }) => {
+  const transporter = createTransporter();
+  if (!transporter) return;
+
+  const safeName = escapeHtml(toName);
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <style>
+        body{margin:0;padding:0;background:#0a0a1a;font-family:'Segoe UI',Arial,sans-serif}
+        .wrap{padding:32px 16px;display:flex;justify-content:center}
+        .card{max-width:480px;width:100%;background:linear-gradient(145deg,#111827,#0f172a);border:1px solid rgba(99,102,241,0.25);border-radius:18px;overflow:hidden}
+        .header{background:linear-gradient(135deg,#6366f1,#0ea5e9);padding:32px 28px;text-align:center}
+        .header h1{margin:0;color:#fff;font-size:22px}
+        .header p{margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px}
+        .body{padding:28px}
+        .body p{color:#cbd5e1;font-size:15px;line-height:1.7;margin:0 0 16px}
+        .body strong{color:#f1f5f9}
+        .cta{display:inline-block;padding:14px 36px;background:linear-gradient(135deg,#6366f1,#0ea5e9);color:#fff !important;text-decoration:none;border-radius:12px;font-weight:700;font-size:15px;margin:8px 0 20px;box-shadow:0 4px 20px rgba(99,102,241,0.4)}
+        .note{font-size:13px;color:#64748b;line-height:1.6;border-top:1px solid rgba(255,255,255,0.06);padding-top:16px;margin-top:8px}
+        .footer{text-align:center;padding:20px;color:#475569;font-size:12px;border-top:1px solid rgba(255,255,255,0.04)}
+      </style>
+    </head>
+    <body>
+      <div class="wrap"><div class="card">
+        <div class="header">
+          <h1>🌍 Verify Your Email</h1>
+          <p>One click to activate your Nexora account</p>
+        </div>
+        <div class="body">
+          <p>Hi <strong>${safeName}</strong>,</p>
+          <p>Thanks for signing up for Nexora! Please verify your email address to activate your account and start connecting with students worldwide.</p>
+          <div style="text-align:center">
+            <a href="${verifyUrl}" class="cta">Verify My Email →</a>
+          </div>
+          <p class="note">This link expires in <strong>24 hours</strong>. If you didn't create a Nexora account, you can safely ignore this email.</p>
+        </div>
+        <div class="footer">Nexora — Connect with students worldwide 🌍</div>
+      </div></div>
+    </body>
+    </html>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      to: toEmail,
+      subject: '🌍 Verify your Nexora email',
+      html,
+    });
+    console.log(`[Email] ✅ Verification email sent to ${toEmail}`);
+  } catch (err) {
+    console.error('[Email] ❌ Failed to send verification email:', err.message);
+  }
+};
+
 module.exports = {
   sendConnectionRequestEmail,
   sendAcceptedEmail,
   sendPasswordResetEmail,
   sendNewMessageEmail,
+  sendVerificationEmail,
   verifyEmailConfig,
 };

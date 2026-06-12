@@ -10,6 +10,9 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState('');
+  const [resending, setResending] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -24,9 +27,28 @@ export default function LoginPage() {
       toast.success(`Welcome back, ${data.user.name}!`);
       navigate('/discover');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Login failed.');
+      const resp = err.response?.data;
+      if (resp?.needsVerification) {
+        setNeedsVerification(true);
+        setVerifyEmail(resp.email);
+        toast.error('Please verify your email first.');
+      } else {
+        toast.error(resp?.message || 'Login failed.');
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      await api.post('/auth/resend-verification', { email: verifyEmail });
+      toast.success('Verification email sent! Check your inbox.');
+    } catch {
+      toast.error('Failed to resend. Try again later.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -48,6 +70,24 @@ export default function LoginPage() {
         </div>
 
         <div className="auth-card glass-card">
+          {needsVerification ? (
+            <div className="auth-success">
+              <div className="auth-success-icon" style={{ background: 'rgba(99,102,241,0.12)', borderColor: 'rgba(99,102,241,0.25)' }}>
+                <span style={{ fontSize: '2rem' }}>📧</span>
+              </div>
+              <h2>Verify Your Email</h2>
+              <p>Your account isn't verified yet. Check <strong style={{ color: 'var(--indigo-light)' }}>{verifyEmail}</strong> for the verification link.</p>
+              <div className="auth-success-actions">
+                <button className="btn btn-secondary" onClick={handleResend} disabled={resending}>
+                  {resending ? <Loader2 size={14} className="spin" /> : null}
+                  {resending ? 'Sending…' : 'Resend Verification'}
+                </button>
+                <button className="btn btn-ghost" onClick={() => setNeedsVerification(false)}>
+                  ← Back to Login
+                </button>
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="auth-form">
             <h2>Welcome Back</h2>
             <p className="auth-subtitle">Sign in to continue connecting</p>
@@ -79,6 +119,7 @@ export default function LoginPage() {
               New to Nexora? <Link to="/signup">Create account</Link>
             </p>
           </form>
+          )}
         </div>
 
         <div className="auth-features">
