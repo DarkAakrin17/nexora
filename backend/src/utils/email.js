@@ -54,12 +54,6 @@ const verifyEmailConfig = async () => {
   }
 };
 
-// Verify transporter — throws if not configured (used for password reset where we MUST send)
-const requireTransporter = () => {
-  const t = createTransporter();
-  if (!t) throw new Error('Email service is not configured on the server.');
-  return t;
-};
 
 // ── Send connection request notification ─────────────────────────────────────
 const sendConnectionRequestEmail = async ({ toEmail, toName, fromName, introMessage, requestId }) => {
@@ -182,7 +176,13 @@ const sendAcceptedEmail = async ({ toEmail, toName, acceptedByName }) => {
 // NOTE: Uses requireTransporter() — throws if email is not configured so the
 // forgot-password route can return a proper 500 instead of silently failing.
 const sendPasswordResetEmail = async ({ toEmail, toName, resetUrl }) => {
-  const transporter = requireTransporter();
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.error('[Email] ❌ Cannot send password reset — email not configured.');
+    throw new Error('Email service is not configured on the server.');
+  }
+
+  const safeName = escapeHtml(toName);
 
   const html = `
     <!DOCTYPE html>
@@ -205,7 +205,7 @@ const sendPasswordResetEmail = async ({ toEmail, toName, resetUrl }) => {
       <div class="wrap"><div class="card">
         <div class="header"><h1>🔐 Reset Your Password</h1></div>
         <div class="body">
-          <p>Hi <strong>${toName}</strong>,</p>
+          <p>Hi <strong>${safeName}</strong>,</p>
           <p>We received a request to reset your Nexora password. Click the button below to set a new password:</p>
           <a href="${resetUrl}" class="cta">Reset Password →</a>
           <div class="notice">⏰ This link expires in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.</div>
@@ -217,13 +217,18 @@ const sendPasswordResetEmail = async ({ toEmail, toName, resetUrl }) => {
     </html>
   `;
 
-  await transporter.sendMail({
-    from: `"Nexora" <${process.env.EMAIL_USER}>`,
-    to: toEmail,
-    subject: `🔐 Reset your Nexora password`,
-    html,
-  });
-  console.log(`[Email] ✅ Password reset email sent to ${toEmail}`);
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || `"Nexora" <${process.env.EMAIL_USER}>`,
+      to: toEmail,
+      subject: `🔐 Reset your Nexora password`,
+      html,
+    });
+    console.log(`[Email] ✅ Password reset email sent to ${toEmail}`);
+  } catch (err) {
+    console.error('[Email] ❌ Failed to send password reset email:', err.message);
+    throw err; // Re-throw so the route can handle it
+  }
 };
 
 // ── Send new message notification (only when receiver is offline) ─────────────
