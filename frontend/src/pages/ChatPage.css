@@ -304,6 +304,23 @@
 }
 
 /* Gradient accent line at top of header */
+.chat-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(99, 102, 241, 0.5) 30%,
+    rgba(14, 165, 233, 0.4) 70%,
+    transparent 100%
+  );
+}
+
+/* Gradient accent line at top of header */
 .chat-header::after {
   content: '';
   position: absolute;
@@ -482,7 +499,7 @@
 }
 
 @keyframes msgIn {
-  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  from { opacity: 0; transform: translateY(10px) scale(0.95); }
   to   { opacity: 1; transform: none; }
 }
 
@@ -744,6 +761,15 @@
   opacity: 0.35;
   box-shadow: none;
   cursor: not-allowed;
+}
+
+/* Pulse animation when message is ready to send */
+.chat-send-btn:not(:disabled) {
+  animation: sendPulse 2s ease-in-out infinite;
+}
+@keyframes sendPulse {
+  0%, 100% { box-shadow: var(--glow-btn); }
+  50% { box-shadow: 0 4px 28px rgba(99,102,241,0.6); }
 }
 
 /* Keyboard hint */

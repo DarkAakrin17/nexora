@@ -12,9 +12,11 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (token && user) {
       initSocket(token);
+    } else {
+      disconnectSocket();
     }
-    // Bug fix #3: properly disconnect on cleanup (token change / logout)
-    return () => { if (!token) disconnectSocket(); };
+    // Disconnect on cleanup so re-renders don't leave orphan sockets
+    return () => disconnectSocket();
   }, [token, user]);
 
   const login = (userData, jwtToken) => {

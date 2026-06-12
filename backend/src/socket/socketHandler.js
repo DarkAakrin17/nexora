@@ -46,6 +46,11 @@ const setupSocket = (io) => {
           return callback?.({ error: 'Invalid message data.' });
         }
 
+        const trimmedMsg = message.trim();
+        if (trimmedMsg.length > 2000) {
+          return callback?.({ error: 'Message too long (max 2000 characters).' });
+        }
+
         // Verify connection
         const connected = await Connection.areConnected(userId, receiverId);
         if (!connected) {
@@ -61,10 +66,16 @@ const setupSocket = (io) => {
           return callback?.({ error: 'Unable to send message.' }); // don't reveal reason
         }
 
+        // Check if sender has blocked receiver — shouldn't be able to message someone you blocked
+        const senderUser = await User.findById(userId).select('blocked_users');
+        if (senderUser?.blocked_users?.some((b) => b.toString() === receiverId)) {
+          return callback?.({ error: 'Unable to send message.' });
+        }
+
         const savedMessage = await Message.create({
           sender: userId,
           receiver: receiverId,
-          message: message.trim(),
+          message: trimmedMsg,
         });
 
         const msgData = {

@@ -49,7 +49,7 @@ router.post(
         return res.status(400).json({ message: 'You are already connected with this user.' });
       }
 
-      // Check existing pending request
+      // Check existing pending request (same direction)
       const existingRequest = await Request.findOne({
         from_user: fromUser._id,
         to_user,
@@ -57,6 +57,32 @@ router.post(
       });
       if (existingRequest) {
         return res.status(400).json({ message: 'You already have a pending request to this user.' });
+      }
+
+      // Check reverse pending request — if they already sent one to us, auto-accept it
+      const reverseRequest = await Request.findOne({
+        from_user: to_user,
+        to_user: fromUser._id,
+        status: 'pending',
+      });
+      if (reverseRequest) {
+        reverseRequest.status = 'accepted';
+        await reverseRequest.save();
+        await Connection.createConnection(to_user, fromUser._id);
+
+        // Notify the original sender
+        if (targetUser.emailNotifications) {
+          sendAcceptedEmail({
+            toEmail: targetUser.email,
+            toName: targetUser.name,
+            acceptedByName: fromUser.name,
+          });
+        }
+
+        return res.status(200).json({
+          message: `${targetUser.name} already sent you a request — you're now connected! 🎉`,
+          autoAccepted: true,
+        });
       }
 
       // Check daily rate limit

@@ -41,6 +41,7 @@ const fetchCountries = () => {
 const GRAD = ['linear-gradient(135deg,#6366f1,#0ea5e9)', 'linear-gradient(135deg,#ec4899,#8b5cf6)', 'linear-gradient(135deg,#10b981,#06b6d4)', 'linear-gradient(135deg,#f59e0b,#ef4444)'];
 const getGrad = (n) => GRAD[(n?.charCodeAt(0) ?? 0) % GRAD.length];
 const getInit = (n) => n?.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() ?? '?';
+const escHtml = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 export default function GlobeDiscoverPage() {
   const globeRef  = useRef(null);
@@ -142,7 +143,7 @@ export default function GlobeDiscoverPage() {
     const admin = feat.properties?.ADMIN || 'Unknown';
     const key   = normalizeAdmin(admin);
     const count = byCountry.get(key)?.length || 0;
-    return `<div class="globe-tip"><strong>${admin}</strong>${count > 0 ? `<span>🎓 ${count} student${count > 1 ? 's' : ''}</span>` : '<span style="opacity:0.5">No students yet</span>'}</div>`;
+    return `<div class="globe-tip"><strong>${escHtml(admin)}</strong>${count > 0 ? `<span>🎓 ${count} student${count > 1 ? 's' : ''}</span>` : '<span style="opacity:0.5">No students yet</span>'}</div>`;
   }, [byCountry]);
 
   const handlePolyClick = useCallback((feat) => {
@@ -198,7 +199,7 @@ export default function GlobeDiscoverPage() {
             pointColor={(d) => d._id === activeUser?._id ? '#ffffff' : d.color}
             pointAltitude={0.018}
             pointRadius={0.45}
-            pointLabel={(d) => `<div class="globe-tip"><strong>${d.name}</strong><span>${d.country || ''}</span></div>`}
+            pointLabel={(d) => `<div class="globe-tip"><strong>${escHtml(d.name)}</strong><span>${escHtml(d.country || '')}</span></div>`}
             onPointClick={handlePointClick}
           />
         )}

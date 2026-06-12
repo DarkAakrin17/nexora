@@ -49,13 +49,12 @@ export default function DiscoverPage() {
       .finally(() => setSuggestLoading(false));
   }, []);
 
-  const fetchUsers = useCallback(async (currentPage = 1, currentFilters = applied) => {
+  const fetchUsers = useCallback(async (currentPage = 1, currentFilters = {}) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: currentPage, limit: 12 });
       Object.entries(currentFilters).forEach(([k, v]) => v && params.set(k, v));
       const { data } = await api.get(`/users?${params}`);
-      // Bug fix: use functional updater correctly for load-more pagination
       setUsers((prev) => currentPage === 1 ? data.users : [...prev, ...data.users]);
       setTotalPages(data.pages);
       setPage(currentPage);
@@ -64,10 +63,9 @@ export default function DiscoverPage() {
     } finally {
       setLoading(false);
     }
-  }, [applied]);
+  }, []);
 
-  // Bug fix: include fetchUsers in dep array
-  useEffect(() => { fetchUsers(1); }, [applied, fetchUsers]);
+  useEffect(() => { fetchUsers(1, applied); }, [applied, fetchUsers]);
 
   const applyFilters = () => { setApplied({ ...filters }); setShowFilters(false); };
   const clearFilters = () => { setFilters({ university: '', campus: '', city: '', country: '' }); setApplied({}); };
@@ -227,7 +225,7 @@ export default function DiscoverPage() {
             </div>
             {page < totalPages && (
               <div className="load-more">
-                <button className="btn btn-secondary" onClick={() => fetchUsers(page + 1)} disabled={loading}>
+                <button className="btn btn-secondary" onClick={() => fetchUsers(page + 1, applied)} disabled={loading}>
                   {loading ? <Loader2 size={16} className="spin" /> : null} Load More
                 </button>
               </div>

@@ -172,9 +172,17 @@ export default function ChatPage() {
   }, [activeUser, me?._id, loadConversations]);
 
   /* ── Auto-scroll ──────────────────────────────────────────────── */
+  // Initial scroll to bottom when messages first load
+  useEffect(() => {
+    if (!msgLoading && messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }
+  }, [msgLoading]);
+
+  // Scroll on new messages (smooth, only if near bottom)
   useEffect(() => {
     const el = chatScrollRef.current;
-    if (!el) return;
+    if (!el || msgLoading) return;
     const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     if (distFromBottom < 200) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -241,12 +249,17 @@ export default function ChatPage() {
     }
   };
 
-  /* ── Open chat with a user ────────────────────────────────────── */
   const openChat = (user) => {
     setActiveUser(user);
     setTyping(false);
     navigate(`/chat/${user._id}`, { replace: true });
-    textareaRef.current?.focus();
+    // Focus textarea after a short delay to let the view render
+    setTimeout(() => textareaRef.current?.focus(), 100);
+  };
+
+  const closeChat = () => {
+    setActiveUser(null);
+    navigate('/chat', { replace: true });
   };
 
   /* ── Build message list with date separators ──────────────────── */
@@ -384,7 +397,7 @@ export default function ChatPage() {
               <button
                 className="back-btn"
                 aria-label="Back to conversations"
-                onClick={() => { setActiveUser(null); navigate('/chat'); }}
+                onClick={closeChat}
               >
                 <ArrowLeft size={16} />
               </button>

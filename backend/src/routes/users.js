@@ -194,10 +194,10 @@ router.get('/', protect, async (req, res) => {
       blocked_users: { $nin: [userId] },
     };
 
-    if (university) filter.university = { $regex: university, $options: 'i' };
-    if (campus)     filter.campus     = { $regex: campus,     $options: 'i' };
-    if (city)       filter.city       = { $regex: city,       $options: 'i' };
-    if (country)    filter.country    = { $regex: country,    $options: 'i' };
+    if (university) filter.university = { $regex: escapeRegex(university), $options: 'i' };
+    if (campus)     filter.campus     = { $regex: escapeRegex(campus),     $options: 'i' };
+    if (city)       filter.city       = { $regex: escapeRegex(city),       $options: 'i' };
+    if (country)    filter.country    = { $regex: escapeRegex(country),    $options: 'i' };
     if (interests)  filter.interests  = { $in: interests.split(',').map((i) => i.trim()) };
 
     const skip  = (parseInt(page) - 1) * parseInt(limit);

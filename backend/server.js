@@ -22,7 +22,11 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
   .split(',').map((o) => o.trim());
 
 const corsOptions = {
-  origin: (origin, cb) => cb(null, allowedOrigins.includes(origin) || !origin),
+  origin: (origin, cb) => {
+    // Allow requests with no origin (mobile apps, curl, same-origin) or whitelisted origins
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   credentials: true,
 };
 
@@ -44,12 +48,12 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(cors(corsOptions));
-// Lightweight NoSQL injection guard — strips keys containing $ or .
+// Lightweight NoSQL injection guard — strips keys starting with $ (Mongo operators)
 const sanitizeBody = (req, res, next) => {
   const sanitize = (obj) => {
-    if (obj && typeof obj === 'object') {
+    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
       Object.keys(obj).forEach((key) => {
-        if (/[$.]/g.test(key)) delete obj[key];
+        if (key.startsWith('$')) delete obj[key];
         else sanitize(obj[key]);
       });
     }

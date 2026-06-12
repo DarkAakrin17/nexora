@@ -1,5 +1,17 @@
 const nodemailer = require('nodemailer');
 
+// Escape HTML to prevent XSS in email templates
+const escapeHtml = (str) =>
+  String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+// Get the first (primary) frontend URL for email links
+const getFrontendUrl = () =>
+  (process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
 // ── Build transporter using explicit SMTP settings (more reliable than 'service' shorthand) ──
 const createTransporter = () => {
   const user = process.env.EMAIL_USER;
@@ -54,7 +66,10 @@ const sendConnectionRequestEmail = async ({ toEmail, toName, fromName, introMess
   const transporter = createTransporter();
   if (!transporter) return;
 
-  const dashboardUrl = `${process.env.FRONTEND_URL}/requests`;
+  const dashboardUrl = `${getFrontendUrl()}/requests`;
+  const safeName = escapeHtml(toName);
+  const safeFrom = escapeHtml(fromName);
+  const safeMsg  = escapeHtml(introMessage);
 
   const html = `
     <!DOCTYPE html>
@@ -82,10 +97,10 @@ const sendConnectionRequestEmail = async ({ toEmail, toName, fromName, introMess
           <p>You have a new connection request</p>
         </div>
         <div class="body">
-          <p>Hi <strong>${toName}</strong>,</p>
-          <div class="badge">From: ${fromName}</div>
+          <p>Hi <strong>${safeName}</strong>,</p>
+          <div class="badge">From: ${safeFrom}</div>
           <p>They introduced themselves:</p>
-          <div class="msg-box">"${introMessage}"</div>
+          <div class="msg-box">"${safeMsg}"</div>
           <p>Head to your dashboard to accept or decline:</p>
           <a href="${dashboardUrl}" class="cta">View Request →</a>
         </div>
@@ -116,7 +131,7 @@ const sendAcceptedEmail = async ({ toEmail, toName, acceptedByName }) => {
   const transporter = createTransporter();
   if (!transporter) return;
 
-  const chatUrl = `${process.env.FRONTEND_URL}/chat`;
+  const chatUrl = `${getFrontendUrl()}/chat`;
 
   const html = `
     <!DOCTYPE html>
@@ -139,8 +154,8 @@ const sendAcceptedEmail = async ({ toEmail, toName, acceptedByName }) => {
       <div class="wrap"><div class="card">
         <div class="header"><h1>🎉 You're Connected!</h1></div>
         <div class="body">
-          <p>Hi <strong>${toName}</strong>,</p>
-          <p><span class="highlight">${acceptedByName}</span> accepted your connection request on Nexora!</p>
+          <p>Hi <strong>${escapeHtml(toName)}</strong>,</p>
+          <p><span class="highlight">${escapeHtml(acceptedByName)}</span> accepted your connection request on Nexora!</p>
           <p>You can now chat, share contact info, and connect on WhatsApp, Instagram, or Telegram.</p>
           <a href="${chatUrl}" class="cta">Start Chatting →</a>
         </div>
@@ -216,7 +231,7 @@ const sendNewMessageEmail = async ({ toEmail, toName, fromName, messagePreview }
   const transporter = createTransporter();
   if (!transporter) return;
 
-  const chatUrl = `${process.env.FRONTEND_URL}/chat`;
+  const chatUrl = `${getFrontendUrl()}/chat`;
   // Truncate preview for safety
   // If the message looks like encrypted ciphertext (hex string), don't show it in email
   const isEncrypted = /^[0-9a-f]{32,}(:[0-9a-f]+)*$/i.test(messagePreview.trim());
@@ -251,9 +266,9 @@ const sendNewMessageEmail = async ({ toEmail, toName, fromName, messagePreview }
           <p>You have an unread message from ${fromName}</p>
         </div>
         <div class="body">
-          <p>Hi <strong>${toName}</strong>,</p>
-          <p><strong>${fromName}</strong> sent you a message:</p>
-          <div class="bubble">"${preview}"</div>
+          <p>Hi <strong>${escapeHtml(toName)}</strong>,</p>
+          <p><strong>${escapeHtml(fromName)}</strong> sent you a message:</p>
+          <div class="bubble">"${escapeHtml(preview)}"</div>
           <a href="${chatUrl}" class="cta">Reply Now →</a>
         </div>
         <div class="footer">

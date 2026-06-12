@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
-import { Globe, Users, MessageCircle, Bell, User, LogOut, Menu, X, Globe2 } from 'lucide-react';
+import { Globe, Users, MessageCircle, Bell, User, LogOut, Menu, X, Globe2, Search } from 'lucide-react';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -36,7 +36,8 @@ export default function Navbar() {
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
   const navLinks = [
-    { to: '/discover',     icon: <Globe2 size={17} />,        label: 'Discover'     },
+    { to: '/discover',     icon: <Globe2 size={17} />,        label: 'Globe'        },
+    { to: '/explore',      icon: <Search size={17} />,         label: 'Explore'      },
     { to: '/requests',     icon: <Bell size={17} />,           label: 'Requests', badge: pendingCount },
     { to: '/connections',  icon: <Users size={17} />,          label: 'Connections'  },
     { to: '/chat',         icon: <MessageCircle size={17} />,  label: 'Messages'     },

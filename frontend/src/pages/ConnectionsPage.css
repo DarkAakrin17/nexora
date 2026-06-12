@@ -2,11 +2,10 @@
 .connections-page {
   padding: 32px 0 60px;
   min-height: calc(100vh - 60px);
-  animation: fadeUp 0.35s var(--ease);
 }
 
 /* ── Header ── */
-.connections-header { margin-bottom: 24px; }
+.connections-header { margin-bottom: 24px; animation: fadeUp 0.35s var(--ease); }
 .connections-title-group {
   display: flex; align-items: center; gap: 14px;
   flex-wrap: wrap; margin-bottom: 6px;
@@ -20,16 +19,22 @@
   background: var(--glass-3); border: 1px solid var(--border);
   color: var(--t3); font-size: 0.78rem; font-weight: 600;
   padding: 3px 12px; border-radius: var(--r-full);
+  animation: fadeUp 0.5s var(--ease);
 }
 .connections-sub { font-size: 0.85rem; color: var(--t4); margin-top: 4px; }
 
-/* ── Search ── */
+/* ── Search — premium glass ── */
 .connections-search-wrap {
   position: relative; max-width: 400px; margin-bottom: 24px;
+  animation: fadeUp 0.4s var(--ease);
 }
 .connections-search-icon {
   position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
   color: var(--t4); pointer-events: none;
+  transition: color var(--dur-base);
+}
+.connections-search-wrap:focus-within .connections-search-icon {
+  color: var(--indigo-light);
 }
 .connections-search {
   width: 100%; padding: 10px 36px 10px 38px;
@@ -45,7 +50,7 @@
 .connections-search:focus {
   border-color: rgba(99,102,241,0.5);
   background: rgba(99,102,241,0.05);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1), 0 0 20px rgba(99,102,241,0.08);
 }
 .connections-search-clear {
   position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
@@ -70,7 +75,7 @@
   gap: 18px;
 }
 
-/* ── Connection Card ── */
+/* ── Connection Card — staggered entrance + hover effects ── */
 .connection-card {
   display: flex; flex-direction: column; gap: 14px; padding: 22px;
   background: rgba(9,11,24,0.78); backdrop-filter: blur(18px);
@@ -82,7 +87,15 @@
               box-shadow var(--dur-base) var(--ease),
               transform var(--dur-base) var(--spring);
   position: relative; overflow: hidden;
+  animation: cardEntrance 0.45s var(--ease) backwards;
 }
+.connection-card:nth-child(1) { animation-delay: 0.02s; }
+.connection-card:nth-child(2) { animation-delay: 0.06s; }
+.connection-card:nth-child(3) { animation-delay: 0.1s; }
+.connection-card:nth-child(4) { animation-delay: 0.14s; }
+.connection-card:nth-child(5) { animation-delay: 0.18s; }
+.connection-card:nth-child(6) { animation-delay: 0.22s; }
+
 .connection-card::after {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(99,102,241,0.4), rgba(14,165,233,0.3), transparent);
@@ -91,13 +104,19 @@
 .connection-card:hover {
   border-color: var(--border-brand);
   box-shadow: var(--shadow-lg), var(--glow-brand);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
 }
 .connection-card:hover::after { opacity: 1; }
 
 .connection-card.confirming {
   border-color: rgba(239,68,68,0.35);
   box-shadow: var(--shadow-card), 0 0 0 3px rgba(239,68,68,0.08);
+  animation: shakeSoft 0.3s var(--ease);
+}
+@keyframes shakeSoft {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
 }
 
 .connection-card-top { display: flex; gap: 14px; align-items: flex-start; }
@@ -143,6 +162,7 @@
   border-radius: var(--r-md); padding: 14px 16px;
   animation: fadeIn 0.2s var(--ease);
 }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .connection-confirm-msg {
   font-size: 0.83rem; color: var(--t3); margin-bottom: 12px; line-height: 1.5;
 }

@@ -46,9 +46,12 @@
   position: relative; z-index: 1;
   width: 100%; max-width: 456px;
   display: flex; flex-direction: column; gap: 22px;
-  animation: fadeUp 0.42s var(--ease);
+  animation: authSlideUp 0.5s var(--ease);
 }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes authSlideUp {
+  from { opacity: 0; transform: translateY(24px); filter: blur(4px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
 
 /* Brand header */
 .auth-brand { display: flex; align-items: center; gap: 14px; }
@@ -57,6 +60,11 @@
   border-radius: 15px; display: flex; align-items: center; justify-content: center;
   color: #fff; box-shadow: var(--glow-btn), inset 0 1px 0 rgba(255,255,255,0.2);
   flex-shrink: 0; position: relative;
+  animation: iconPulse 3s ease-in-out infinite;
+}
+@keyframes iconPulse {
+  0%, 100% { box-shadow: var(--glow-btn), inset 0 1px 0 rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 4px 30px rgba(99,102,241,0.6), inset 0 1px 0 rgba(255,255,255,0.2); }
 }
 .brand-icon::after {
   content: ''; position: absolute; inset: -4px; border-radius: 20px;
@@ -73,7 +81,7 @@
 }
 .brand-tagline { font-size: 0.82rem; color: var(--t4); margin: 2px 0 0; }
 
-/* Auth card */
+/* Auth card — premium glass with animated border */
 .auth-card {
   background: rgba(8,10,24,0.85);
   backdrop-filter: blur(44px); -webkit-backdrop-filter: blur(44px);
@@ -84,10 +92,21 @@
               inset 0 1px 0 rgba(255,255,255,0.06);
   position: relative; overflow: hidden;
 }
+/* Animated gradient border shimmer */
 .auth-card::before {
-  content: ''; position: absolute; top: -50px; left: -50px;
-  width: 200px; height: 200px;
-  background: radial-gradient(circle, rgba(99,102,241,0.1), transparent 70%);
+  content: ''; position: absolute; top: 0; left: -100%;
+  width: 200%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.6), rgba(14,165,233,0.5), transparent);
+  animation: borderShimmer 4s linear infinite;
+}
+@keyframes borderShimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+.auth-card::after {
+  content: ''; position: absolute; top: -80px; left: -80px;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(99,102,241,0.08), transparent 70%);
   pointer-events: none;
 }
 
@@ -183,6 +202,7 @@
 }
 .auth-feature-chip:hover {
   background: var(--glass-2); border-color: var(--border-hover); color: var(--t3);
+  transform: translateY(-2px);
 }
 
 /* Success / done state */

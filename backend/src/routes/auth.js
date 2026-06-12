@@ -58,8 +58,11 @@ router.post(
           course: user.course,
           city: user.city,
           country: user.country,
+          intake_year: user.intake_year,
           interests: user.interests,
           bio: user.bio,
+          contact_info: user.contact_info,
+          showEmailToConnections: user.showEmailToConnections,
           emailNotifications: user.emailNotifications,
           created_at: user.created_at,
         },
@@ -109,8 +112,11 @@ router.post(
           course: user.course,
           city: user.city,
           country: user.country,
+          intake_year: user.intake_year,
           interests: user.interests,
           bio: user.bio,
+          contact_info: user.contact_info,
+          showEmailToConnections: user.showEmailToConnections,
           emailNotifications: user.emailNotifications,
           created_at: user.created_at,
         },
@@ -168,7 +174,7 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save({ validateBeforeSave: false });
 
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+    const resetUrl = `${(process.env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim()}/reset-password/${token}`;
 
     try {
       await sendPasswordResetEmail({ toEmail: user.email, toName: user.name, resetUrl });
